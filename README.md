@@ -6,7 +6,7 @@
 
 This repository serves as a coding demonstration for using the **Maestro Midi Player Tool Kit (MPTK)** in Unity. Maestro MPTK allows you to easily and quickly add or create MIDI music to your Unity application and interact with it seamlessly. It can't run on its own. Please go to the Unity store to download the full and working package.
 - **Free MPTK**: [Maestro - Midi Player Tool Kit - Free](https://assetstore.unity.com/packages/tools/audio/maestro-midi-player-tool-kit-free-107994)
-- **Pro MPTK**: [Maestro - Midi Player Tool Kit - Free](https://assetstore.unity.com/packages/tools/audio/maestro-midi-player-tool-kit-pro-115331)
+- **Pro MPTK**: [Maestro - Midi Player Tool Kit - Pro](https://assetstore.unity.com/packages/tools/audio/maestro-midi-player-tool-kit-pro-115331)
 
 ## Main Features
 
@@ -29,4 +29,4 @@ For detailed API documentation and migration guides, visit the official [Maestro
 
 ## Support
 
-If you encounter any issues or have questions, feel free to visit the [Unity forum](https://forum.unity.com/) or refer to the [official Maestro MPTK support page](https://mptkapi.paxstellar.com/) or join us on [Discord]([https://forum.unity.com/](https://discord.gg/5tgVmZG9pr).
+If you encounter any issues or have questions, feel free to visit the [Official Maestro MPTK support page](https://forum.unity.com/threads/maestro-midi-player-tool-kit-good-news-for-your-rhythm-game.526741/) or join us on [Discord](https://discord.gg/5tgVmZG9pr).
