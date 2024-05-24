@@ -4,6 +4,7 @@ using UnityEngine;
 using System;
 using UnityEngine.Events;
 using MidiPlayerTK;
+using UnityEngine.UIElements;
 
 namespace DemoMPTK
 {
@@ -105,6 +106,8 @@ namespace DemoMPTK
             int spaceV = 10;
             if (!HelperDemo.CheckSFExists()) return;
 
+            Vector3 scale = HelperDemo.GUIScale();
+
             // Set custom Style. Good for background color 3E619800
             if (myStyle == null)
                 myStyle = new CustomStyle();
@@ -113,9 +116,9 @@ namespace DemoMPTK
             {
                 scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(Screen.width));
 
-                MainMenu.Display("Test MIDI In Reader - Connect Midi input device to the MPTK Synth", myStyle, "https://paxstellar.fr/prefab-midiinreader/");
+                MainMenu.Display("Test MIDI In Reader - Connect Midi input device to the MPTK Synth", myStyle, Screen.width, "https://paxstellar.fr/prefab-midiinreader/");
 
-                GUISelectSoundFont.Display(scrollerWindow, myStyle);
+                GUISelectSoundFont.Display(scrollerWindow, myStyle, Screen.width / scale.x);
 
                 // Horizontal: 2 columns
                 GUILayout.BeginHorizontal();

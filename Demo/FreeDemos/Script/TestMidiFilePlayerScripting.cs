@@ -8,7 +8,7 @@ using UnityEditor;
 
 namespace DemoMPTK
 {
-    public class TestMidiFilePlayerScripting : MonoBehaviour
+    public partial class TestMidiFilePlayerScripting : MonoBehaviour
     {
         /// <summary>@brief
         /// MPTK component able to play a Midi file from your list of Midi file. This PreFab must be present in your scene.
@@ -52,17 +52,33 @@ namespace DemoMPTK
         public bool FoldOutMetronome;
         private int volumeMetronome = 100;
         private int instrumentMetronome = 60;
+        private int stopPlayingAtMeasure = -1;
 
+        public bool ViewerEnabled;
+        public bool InnerLoopEnabled;
+        public bool InnerLoopLog;
+        public long InnerLoopStart;
+        public long InnerLoopResume;
+        public long InnerLoopEnd;
+        public long InnerLoopCount;
+        public int InnerSlider = 4;
+
+        public bool FoldOutViewer = false;
         public bool FoldOutStartStopRamp = false;
         public bool FoldOutAlterMidi = false;
         public bool FoldOutChannelDisplay = false;
         public bool FoldOutRealTimeChange = false;
         public bool FoldOutSetStartStopPosition = false;
+        public bool FoldOutInnerLoop = false;
         public bool FoldOutGeneralSettings = false;
         public bool FoldOutEffectSoundFontDisplay = false;
         public bool FoldOutEffectUnityDisplay = false;
 
         public float widthIndent = 2.5f;
+        Vector3 scale;
+        public float widthLeftPanel;
+        public float widthScaledLeftPanel;
+        public float widthGUI;
 
         // Manage skin
         private CustomStyle myStyle;
@@ -91,6 +107,171 @@ namespace DemoMPTK
         //DateTime localStartTimeMidi;
         TimeSpan realTimeMidi;
 
+
+        void Start()
+        {
+
+            midiStat = new MPTKStat();
+            notesViewerCircle = new NoteViewerCircle[MAX_LINE_RENDERER];
+
+            for (int i = 0; i < MAX_LINE_RENDERER; i++)
+            {
+                notesViewerCircle[i] = new NoteViewerCircle(Renderer, PrefabWithLineRenderer, ShadowScreen, i);
+            }
+
+            // Warning: Avoid defining this event through the script as shown below, as the initial loading may not be triggered. MidiPlayerGlobal is loads before all other game components.
+            // It is better to set this method from the MidiPlayerGlobal event inspector.
+            // This should be done in the Start event (not Awake).
+            MidiPlayerGlobal.OnEventPresetLoaded.AddListener(MaestroOnEventPresetLoaded);
+
+            PopMidi = new PopupListItem()
+            {
+                Title = "Select A MIDI File",
+                OnSelect = MastroMidiSelected,
+                Tag = "NEWMIDI",
+                ColCount = 3,
+                ColWidth = 250,
+            };
+
+            // the prefab MidifIlePlayer must be defined in the inspector. You can associated with midiFilePlayer variable
+            // with the inspector or you can search it by script with FindObjectOfType.
+            if (midiFilePlayer == null)
+            {
+                Debug.Log("No MidiFilePlayer defined with the editor inspector, try to find one");
+                MidiFilePlayer fp = FindObjectOfType<MidiFilePlayer>();
+                if (fp == null)
+                    Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
+                else
+                {
+                    midiFilePlayer = fp;
+                }
+            }
+
+            // useless v2.9.0 MidiLoad midiLoaded = midiFilePlayer.MPTK_Load();
+            //if (midiLoaded == null) throw new Exception("Could not load MIDI file");
+            //Debug.Log(midiLoaded.MPTK_TrackCount);
+
+            if (midiFilePlayer != null)
+            {
+#if MPTK_PRO
+                // OnMidiEvent (pro) and OnEventNotesMidi are triggered for each notes that the MIDI sequencer read
+                // However, the use of these methods depends on the specific requirements of the situation.”:
+                //      OnEventNotesMidi is handled from the main Unity thread (in the Update loop) 
+                //          - The accuracy of this process is not guaranteed because it depends on the Unity process and the value of Time.deltaTime.
+                //            (interval in seconds from the last frame to the current one).
+                //          - MIDI events cannot be modified before being processed by the MIDI synth.
+                //          - A direct call to the Unity API is not possible.
+                //      OnMidiEvent is handled from an internal managed thread 
+                //          - The accuracy is garanteed.
+                //          - MIDI events can be modified before being processed by the MIDI synth.
+                //          - MIDI events are skipped if the return of PreProcessMidi is false (v2.10.0).
+                //          - A direct call to the Unity API is not possible (but Debug.log is possible).
+                midiFilePlayer.OnMidiEvent = MaestroOnMidiEvent;
+
+                //! [Example_OnBeatEvent]
+
+                // OnBeatEvent (pro) is triggered by the MPTK MIDI sequencer at each beat independantly of MIDI events 
+                //    - OnBeatEvent is executed at each beat even if there is there no MIDI event on the beat.
+                //    - Accuracy is garanteed (internal thread).
+                //    - Direct call to Unity API is not possible (but you have access to all your script variables and most part of the MPTK API).
+                // Parameters received: 
+                //    - time        Time in milliseconds since the start of the playing MIDI.
+                //    - tick        Current tick of the beat.
+                //    - measure     Current measure (start from 1).
+                //    - beat        Current beat (start from 1).
+                midiFilePlayer.OnBeatEvent = (int time, long tick, int measure, int beat) =>
+                {
+                    if (FoldOutMetronome)
+                    {
+                        // Calculate the value to be displayed on the FoldOut Metronome and on the log
+                        beatTimeTick = $"Time: {TimeSpan.FromMilliseconds(time)} Tick: {tick}";
+                        beatMeasure = $"Beat/Measure: {beat}/{measure}";
+
+                        Debug.Log($"OnBeatEvent - {beatTimeTick} Signature segment:{midiFilePlayer.MPTK_MidiLoaded.MPTK_CurrentSignMap.Index} {beatMeasure}");
+
+                        // for testing interaction with Maestro MPTK player
+                        if (stopPlayingAtMeasure != -1 && measure >= stopPlayingAtMeasure)
+                            // Stops playback of the MIDI file. But the triggering event could be still playing (too late for stop it).
+                            midiFilePlayer.MPTK_Stop(false);
+
+                        // Plays an extra drum sound with each beat
+                        midiFilePlayer.MPTK_PlayDirectEvent(new MPTKEvent()
+                        {
+                            Command = MPTKCommand.NoteOn,
+                            Channel = 9,
+                            Value = instrumentMetronome,
+                            Velocity = volumeMetronome,
+                            Measure = measure,
+                            Beat = beat
+                        });
+                    }
+                };
+                //! [Example_OnBeatEvent]
+
+#endif
+
+                // There is two methods to trigger event: 
+                //      1) in inpector from the Unity editor 
+                //      2) by script, see below 
+                // ------------------------------------------
+
+                //! [Example OnEventStartPlayMidi]
+                // Event trigger each time a MIDI file starts playing
+                Debug.Log("OnEventStartPlayMidi defined by script");
+                midiFilePlayer.OnEventStartPlayMidi.RemoveAllListeners();
+                midiFilePlayer.OnEventStartPlayMidi.AddListener(info =>
+                    {
+                        MaestroOnEventStartPlayMidi("Event set by script");
+                        // It’s a good opportunity to change the channel configuration.”
+                        // Example (uncomment to disable channel 0 at start)
+                        // midiFilePlayer.MPTK_Channels[0].Enable = false;
+                    });
+
+                //! [Example OnEventStartPlayMidi]
+
+                // An event is triggered when the MIDI file has finished playing.
+                Debug.Log("OnEventEndPlayMidi defined by script");
+                midiFilePlayer.OnEventEndPlayMidi.AddListener(MaestroOnEventEndPlayMidi);
+
+                // An event is triggered for each group of notes that is read from the MIDI file.
+                // WARNING - that could create some weird sound at start when a lot of MIDI events are on the tick 0
+                Debug.Log("OnEventNotesMidi defined by script");
+                midiFilePlayer.OnEventNotesMidi.AddListener(MaestroOnEventNotesMidi);
+            }
+        }
+
+        void Update()
+        {
+            // Update line renderer for note viewer
+            //  - apply transparency relation to time
+            //  - disable line renderer at end
+            // Move the cube with the shadows along the Z axis.
+            foreach (NoteViewerCircle noteViewer in notesViewerCircle)
+                if (noteViewer != null)
+                    noteViewer.Update();
+
+            if (midiFilePlayer != null && midiFilePlayer.MPTK_IsPlaying)
+            {
+                //
+                // There is no UI for these random change, to be enabled from the inspector
+                // 
+                float time = Time.realtimeSinceStartup - LastTimeChange;
+                if (DelayRandomSecond > 0f && time > DelayRandomSecond)
+                {
+                    // It's time to apply Random change
+                    LastTimeChange = Time.realtimeSinceStartup;
+
+                    // Random position
+                    if (IsRandomPosition) midiFilePlayer.MPTK_Position = UnityEngine.Random.Range(0f, (float)midiFilePlayer.MPTK_Duration.TotalMilliseconds);
+
+                    // Random Speed
+                    if (IsRandomSpeed) midiFilePlayer.MPTK_Speed = UnityEngine.Random.Range(0.1f, 5f);
+
+                    // Random transpose
+                    if (IsRandomTranspose) midiFilePlayer.MPTK_Transpose = UnityEngine.Random.Range(-12, 13);
+                }
+            }
+        }
         /// <summary>
         /// PreProcessMidi is triggered from an internal thread.
         ///    - Accuracy is garantee (see midiFilePlayer.MPTK_Pulse which is the minimum time in millisecond between two MIDI events).
@@ -156,150 +337,6 @@ namespace DemoMPTK
             return playEvent;
         }
 
-        /// <summary>
-        /// Action is executed at each beat even if there is there no MIDI event on the beat (Pro).
-        /// Accuracy is garantee.
-        /// Direct call to Unity API is not possible but Debug.Log and Maestro API (example, play a sound at each beat) are allowed.
-        /// </summary>
-        /// <param name="time">Time in milliseconds since the start of the playing MIDI.</param>
-        /// <param name="tick">Current tick.</param>
-        /// <param name="measure">Current measure (start from 1).</param>
-        /// <param name="beat">current beat (start from 1).</param>
-        void OnBeatAction(int time, long tick, int measure, int beat)
-        {
-            if (FoldOutMetronome)
-            {
-                Debug.Log($"QuarterAction - time:{time} sec. tick:{tick} tempoMap:{midiFilePlayer.MPTK_MidiLoaded.MPTK_CurrentSignMap.Index} measure:{measure} beat:{beat}");
-                //// for testing only
-                //if (measure >= 3)
-                //    // Stop the MIDI playing but not sound (not allowed in this action out of the Unity thread)
-                //    midiFilePlayer.MPTK_Stop(false);
-
-                midiFilePlayer.MPTK_PlayDirectEvent(new MPTKEvent()
-                {
-                    Command = MPTKCommand.NoteOn,
-                    Channel = 9,
-                    Value = instrumentMetronome,
-                    Velocity = volumeMetronome,
-                    Measure = measure,
-                    Beat = beat
-                });
-            }
-        }
-
-
-        void Start()
-        {
-
-            // Warning: Avoid defining this event through the script as shown below, as the initial loading may not be triggered
-            // if MidiPlayerGlobal is loads before any other game component.
-            // It is preferable to set this method from the MidiPlayerGlobal event inspector.
-            // This should be done in the Start event (not Awake).
-            MidiPlayerGlobal.OnEventPresetLoaded.AddListener(MaestroOnEventPresetLoaded);
-
-            PopMidi = new PopupListItem()
-            {
-                Title = "Select A MIDI File",
-                OnSelect = MastroMidiSelected,
-                Tag = "NEWMIDI",
-                ColCount = 3,
-                ColWidth = 250,
-            };
-
-            // the prefab MidifIlePlayer must be defined in the inspector. You can associated with midiFilePlayer variable
-            // with the inspector or by script
-            if (midiFilePlayer == null)
-            {
-                Debug.Log("No MidiFilePlayer defined with the editor inspector, try to find one");
-                MidiFilePlayer fp = FindObjectOfType<MidiFilePlayer>();
-                if (fp == null)
-                    Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
-                else
-                {
-                    midiFilePlayer = fp;
-                }
-            }
-
-            // useless v2.9.0 MidiLoad midiLoaded = midiFilePlayer.MPTK_Load();
-            //if (midiLoaded == null) throw new Exception("Could not load MIDI file");
-            //Debug.Log(midiLoaded.MPTK_TrackCount);
-
-            if (midiFilePlayer != null)
-            {
-#if MPTK_PRO
-                // OnMidiEvent (pro) and OnEventNotesMidi are triggered for each notes that the MIDI sequencer read
-                // However, the use of these methods depends on the specific requirements of the situation.”:
-                //      OnEventNotesMidi is handled from the main Unity thread (in the Update loop) 
-                //          - The accuracy of this process is not guaranteed because it depends on the Unity process and the value of Time.deltaTime.
-                //            (interval in seconds from the last frame to the current one).
-                //          - MIDI events cannot be modified before being processed by the MIDI synth.
-                //          - A direct call to the Unity API is not possible.
-                //      OnMidiEvent is handled from an internal managed thread 
-                //          - The accuracy is garanteed.
-                //          - MIDI events can be modified before being processed by the MIDI synth.
-                //          - MIDI events are skipped if the return of PreProcessMidi is false (v2.10.0).
-                //          - A direct call to the Unity API is not possible (but Debug.log is possible).
-                midiFilePlayer.OnMidiEvent = MaestroOnMidiEvent;
-
-                // OnBeatEvent (pro) is triggered by the MIDI sequencer at each beat independantly of MIDI events 
-                //    - Evant is executed at each beat even if there is there no MIDI event on the beat.
-                //    - Accuracy is garantee.
-                //    - Direct call to Unity API is not possible (but you have access to all your script variables).
-                // Parameters: 
-                //    - time        Time in milliseconds since the start of the playing MIDI.
-                //    - tick        Current tick of the beat.
-                //    - measure     Current measure (start from 1).
-                //    - beat        Current beat (start from 1).
-                midiFilePlayer.OnBeatEvent = (int time, long tick, int measure, int beat) =>
-                {
-                    if (FoldOutMetronome)
-                    {
-                        beatTimeTick = $"Time:{time} sec. Tick:{tick}";
-                        beatMeasure = $"Measure:{measure} Beat:{beat}";
-
-                        Debug.Log($"Quarter - {beatTimeTick} Signature segment:{midiFilePlayer.MPTK_MidiLoaded.MPTK_CurrentSignMap.Index} {beatMeasure}");
-                        midiFilePlayer.MPTK_PlayDirectEvent(new MPTKEvent()
-                        {
-                            Command = MPTKCommand.NoteOn,
-                            Channel = 9,
-                            Value = instrumentMetronome,
-                            Velocity = volumeMetronome,
-                            Measure = measure,
-                            Beat = beat
-                        });
-                    }
-                };
-
-#endif
-
-                // There is two methods to trigger event: 
-                //      1) in inpector from the Unity editor 
-                //      2) by script, see below 
-                // ------------------------------------------
-
-                //! [Example OnEventStartPlayMidi]
-                // Event trigger each time a MIDI file starts playing
-                Debug.Log("OnEventStartPlayMidi defined by script");
-                midiFilePlayer.OnEventStartPlayMidi.RemoveAllListeners();
-                midiFilePlayer.OnEventStartPlayMidi.AddListener(info =>
-                    {
-                        MaestroOnEventStartPlayMidi("Event set by script");
-                        // It’s a good opportunity to change the channel configuration.”
-                        // Example (uncomment to disable channel 0 at start)
-                        // midiFilePlayer.MPTK_Channels[0].Enable = false;
-                    });
-
-                //! [Example OnEventStartPlayMidi]
-
-                // An event is triggered when the MIDI file has finished playing.
-                Debug.Log("OnEventEndPlayMidi defined by script");
-                midiFilePlayer.OnEventEndPlayMidi.AddListener(MaestroOnEventEndPlayMidi);
-
-                // An event is triggered for each group of notes that is read from the MIDI file.
-                Debug.Log("OnEventNotesMidi defined by script");
-                midiFilePlayer.OnEventNotesMidi.AddListener(MaestroOnEventNotesMidi);
-            }
-        }
 
         /// <summary>@brief
         /// This method is defined from MidiPlayerGlobal event inspector and run when SoundFont is loaded.
@@ -321,6 +358,8 @@ namespace DemoMPTK
         /// </summary>
         public void MaestroOnEventStartPlayMidi(string name)
         {
+            midiStat.Calculate(midiFilePlayer.MPTK_MidiEvents);
+
             infoLyrics = "";
             infoCopyright = "";
             infoSeqTrackName = "";
@@ -334,10 +373,12 @@ namespace DemoMPTK
                 infoMidi += $"Track Count  : {midiFilePlayer.MPTK_MidiLoaded.MPTK_TrackCount}\n";
                 infoMidi += $"Initial Tempo: {midiFilePlayer.MPTK_MidiLoaded.MPTK_InitialTempo:F2}\n";
                 infoMidi += $"Delta Ticks  : {midiFilePlayer.MPTK_MidiLoaded.MPTK_DeltaTicksPerQuarterNote} Ticks Per Quarter\n";
-                infoMidi += $"Pulse Length : {midiFilePlayer.MPTK_PulseLenght} milliseconds (MIDI resolution)\n";
+                infoMidi += $"Pulse Length : {midiFilePlayer.MPTK_Pulse} milliseconds (MIDI resolution)\n";
                 infoMidi += $"Number Beats Measure   : {midiFilePlayer.MPTK_MidiLoaded.MPTK_NumberBeatsMeasure}\n";
                 infoMidi += $"Number Quarter Beats   : {midiFilePlayer.MPTK_MidiLoaded.MPTK_NumberQuarterBeat}\n";
                 infoMidi += $"Count MIDI Events      : {midiFilePlayer.MPTK_MidiEvents.Count}\n";
+                infoMidi += $"Note Min / Max         : {midiStat.NoteMin} / {midiStat.NoteMax}\n";
+                infoMidi += $"\n";
                 infoMidi += $"Tempo Change\n";
                 foreach (MPTKTempo tempo in midiFilePlayer.MPTK_MidiLoaded.MPTK_TempoMap)
                 {
@@ -404,6 +445,17 @@ namespace DemoMPTK
 
                     case MPTKCommand.NoteOn:
                         //Debug.LogFormat($"Note Channel:{midiEvent.Channel} {midiEvent.Value} Velocity:{midiEvent.Velocity} Duration:{midiEvent.Duration}");
+                        if (ViewerEnabled)
+                        {
+                            // If viewer is enable,
+                            //    - find the next viewer available
+                            //    - start display for this note
+                            //    - it's a cyclic process, older viewer already active could be overridden
+                            if (++lastNoteViewer >= notesViewerCircle.Length)
+                                lastNoteViewer = 0;
+
+                            notesViewerCircle[lastNoteViewer].AssignMidi(midiEvent, midiStat.NoteMin, midiStat.NoteMax);
+                        }
                         break;
 
                     case MPTKCommand.MetaEvent:
@@ -499,30 +551,36 @@ namespace DemoMPTK
             }
         }
         //! [Example TheMostSimpleDemoForMidiPlayer]
-
         void OnGUI()
         {
             if (myStyle == null) { myStyle = new CustomStyle(); HelperDemo.myStyle = myStyle; }
 
             if (midiFilePlayer != null)
             {
-                scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(Screen.width), GUILayout.Height(Screen.height));
+                scale = HelperDemo.GUIScale();
+                widthScaledLeftPanel = widthLeftPanel;/// scale.x;
+                widthGUI = (ViewerEnabled ? widthScaledLeftPanel : Screen.width / scale.x);
+                // +25 to avoid useless HScroll
+                scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(widthGUI + 25), GUILayout.Height(Screen.height / scale.y));
+
+                //goViewer.transform.position = new Vector3(widthLeftPanel, goViewer.transform.position.y, goViewer.transform.position.z);
 
                 HelperDemo.GUI_Horizontal(HelperDemo.Zone.INIT);
                 HelperDemo.GUI_Vertical(HelperDemo.Zone.INIT);
 
                 // Display popup in first to avoid activate other layout behind
                 PopMidi.Draw(MidiPlayerGlobal.MPTK_ListMidi, midiFilePlayer.MPTK_MidiIndex, myStyle);
-                MainMenu.Display("Test MIDI File Player Scripting - Demonstrate how to use the MPTK API to Play Midi", myStyle, "https://paxstellar.fr/midi-file-player-detailed-view-2/");
-                GUISelectSoundFont.Display(scrollerWindow, myStyle);
-
+                MainMenu.Display("Test MIDI File Player Scripting - Demonstrate how to use the MPTK API to Play Midi", myStyle, widthGUI,
+                    "https://paxstellar.fr/midi-file-player-detailed-view-2/");
+                GUISelectSoundFont.Display(scrollerWindow, myStyle, widthGUI);
                 HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN); // for left/right panel
 
                 // Midi action
                 OnGUI_LeftPanel();
 
                 // Display information about the MIDI
-                OnGUI_RightPanel();
+                if (!ViewerEnabled)
+                    OnGUI_RightPanel();
 
                 HelperDemo.GUI_Horizontal(HelperDemo.Zone.END); // for left/right panel
 
@@ -541,62 +599,72 @@ namespace DemoMPTK
 
         private void OnGUI_LeftPanel()
         {
-            HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN, myStyle.BacgDemosMedium, GUILayout.Width(700));
+            HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN, myStyle.BacgDemosMedium, GUILayout.Width(widthScaledLeftPanel));
 
             HelperDemo.DisplayInfoSynth(midiFilePlayer, 600, myStyle);
 
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
+            GUILayout.Label($"Select a MIDI file:", myStyle.TitleLabel3, GUILayout.Width(80));
             // Open the popup to select a midi
-            if (GUILayout.Button($"{midiFilePlayer.MPTK_MidiIndex} - '{midiFilePlayer.MPTK_MidiName}'", GUILayout.Height(40)))
+            if (GUILayout.Button($"{midiFilePlayer.MPTK_MidiIndex} - '{midiFilePlayer.MPTK_MidiName}'", GUILayout.Height(40), GUILayout.Width(280)))
                 PopMidi.Show = !PopMidi.Show;
+            if (Application.isEditor)
+                GUILayout.Label("This demo is built with IMGUI, unfortunately the garbage collector causes wait times in editor mode. Building with IL2CPP solves this problem.", myStyle.TitleLabel3);
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
 
             OnGUI_PlayPauseStopMIDI();
 
             OnGui_MidiTimePosition();
 
-            FoldOutGeneralSettings = GUILayout.Toggle(FoldOutGeneralSettings, "General Settings (volume, speed, ...)");
+            FoldOutGeneralSettings = HelperDemo.FoldOut(FoldOutGeneralSettings, "General Settings (volume, speed, ...)", "https://mptkapi.paxstellar.com/d7/deb/class_midi_player_t_k_1_1_midi_file_player.html");
             if (FoldOutGeneralSettings)
                 OnGUI_MidiGeneralSettings();
 
-            FoldOutSetStartStopPosition = GUILayout.Toggle(FoldOutSetStartStopPosition, "Set MIDI Start & Stop Position");
+            FoldOutSetStartStopPosition = HelperDemo.FoldOut(FoldOutSetStartStopPosition, "Set MIDI Start & Stop Position", "https://mptkapi.paxstellar.com/d7/deb/class_midi_player_t_k_1_1_midi_file_player.html#aabd956ce6d15dca46ca0d53d9be40fa7");
             if (FoldOutSetStartStopPosition)
                 OnGUI_MidiStartStopPosition();
 
+            FoldOutViewer = HelperDemo.FoldOut(FoldOutViewer, "MIDI Viewer", "https://mptkapi.paxstellar.com/d7/deb/class_midi_player_t_k_1_1_midi_file_player.html#af15c52b3fef54a544db289fe18b0ffe5");
+            if (FoldOutViewer)
+                OnGUI_MidiViewer();
+
+            FoldOutInnerLoop = HelperDemo.FoldOut(FoldOutInnerLoop, "MIDI Inner Loop [Pro]", "https://mptkapi.paxstellar.com/d7/deb/class_midi_player_t_k_1_1_midi_file_player.html#a872c1de207fde3f38ce7e93cf13955be");
+            if (FoldOutInnerLoop)
+                OnGUI_InnerLoop();
+
             // Channel setting display
-            FoldOutChannelDisplay = GUILayout.Toggle(FoldOutChannelDisplay, "Display Channels and Change Properties");
+            FoldOutChannelDisplay = HelperDemo.FoldOut(FoldOutChannelDisplay, "Display Channels and Change Properties", "https://mptkapi.paxstellar.com/d0/d99/class_midi_player_t_k_1_1_m_p_t_k_channels.html");
             if (FoldOutChannelDisplay)
                 OnGUI_ChannelChange();
 
-            FoldOutStartStopRamp = GUILayout.Toggle(FoldOutStartStopRamp, "Play with Crescendo and Stop with Diminuendo [Pro]");
+            FoldOutStartStopRamp = HelperDemo.FoldOut(FoldOutStartStopRamp, "Play with Crescendo and Stop with Diminuendo [Pro]", "https://mptkapi.paxstellar.com/d7/deb/class_midi_player_t_k_1_1_midi_file_player.html#a5677c5289df9c77777422c65ea31af58");
             if (FoldOutStartStopRamp)
                 OnGUI_StartStopCrescendo();
 
-            FoldOutAlterMidi = GUILayout.Toggle(FoldOutAlterMidi, "Modify MIDI and Play [Pro]");
+            FoldOutAlterMidi = HelperDemo.FoldOut(FoldOutAlterMidi, "Modify MIDI and Play [Pro]", "https://mptkapi.paxstellar.com/d7/deb/class_midi_player_t_k_1_1_midi_file_player.html#a7c1b1b1efab0022731f69e5161952c59");
             if (FoldOutAlterMidi)
                 OnGUI_ModifyMidiAndPlay();
 
-            FoldOutMetronome = GUILayout.Toggle(FoldOutMetronome, "Enable Metronome [Pro]");
+            FoldOutMetronome = HelperDemo.FoldOut(FoldOutMetronome, "Enable Metronome [Pro]", "https://mptkapi.paxstellar.com/d3/d1d/class_midi_player_t_k_1_1_midi_synth.html#a7f4f01651da795149866f38cdd068c2c");
             if (FoldOutMetronome)
                 OnGUI_EnableMetronome();
 
-            FoldOutRealTimeChange = GUILayout.Toggle(FoldOutRealTimeChange, "Real-time MIDI Change [Pro]");
+            FoldOutRealTimeChange = HelperDemo.FoldOut(FoldOutRealTimeChange, "Real-time MIDI Change [Pro]", "https://mptkapi.paxstellar.com/d3/d1d/class_midi_player_t_k_1_1_midi_synth.html#a45b22cbcee07d6012d6652b60bfce269");
             if (FoldOutRealTimeChange)
                 OnGUI_RealTimeMIDIChange();
 
-            FoldOutEffectSoundFontDisplay = GUILayout.Toggle(FoldOutEffectSoundFontDisplay, "Enable SoundFont Effects [Pro]");
+            FoldOutEffectSoundFontDisplay = HelperDemo.FoldOut(FoldOutEffectSoundFontDisplay, "Enable SoundFont Effects [Pro]", "https://mptkapi.paxstellar.com/df/da3/class_midi_player_t_k_1_1_m_p_t_k_effect_sound_font.html");
             if (FoldOutEffectSoundFontDisplay)
-#if MPTK_PRO
                 HelperDemo.GUI_EffectSoundFont(widthIndent, midiFilePlayer.MPTK_EffectSoundFont);
-#else
-                HelperDemo.GUI_EffectSoundFont(widthIndent);
-#endif
 
-            FoldOutEffectUnityDisplay = GUILayout.Toggle(FoldOutEffectUnityDisplay, "Enable Unity Effects [Pro]");
+            FoldOutEffectUnityDisplay = HelperDemo.FoldOut(FoldOutEffectUnityDisplay, "Enable Unity Effects [Pro]", "https://mptkapi.paxstellar.com/d7/d64/class_midi_player_t_k_1_1_m_p_t_k_effect_unity.html");
             if (FoldOutEffectUnityDisplay)
 #if MPTK_PRO
                 HelperDemo.GUI_EffectUnity(widthIndent, midiFilePlayer.MPTK_EffectUnity);
 #else
                 HelperDemo.GUI_EffectUnity(widthIndent);
 #endif
+
 
             HelperDemo.GUI_Vertical(HelperDemo.Zone.END);
         }
@@ -615,9 +683,9 @@ namespace DemoMPTK
             //string realTime = $"Real Time: {realTimeMidi.Hours:00}:{realTimeMidi.Minutes:00}:{realTimeMidi.Seconds:00}:{realTimeMidi.Milliseconds:000} ";
             //// and the delta time with the last MIDI events
             //string deltaTime = $"Delta time with the last MIDI event: {(timePosition - realTimeMidi).TotalSeconds:F3} second";
-            //GUILayout.Label(realTime + deltaTime, myStyle.TitleLabel3, GUILayout.Width(500));
+            //GUILayout.Label(realTime /*+ deltaTime*/, myStyle.TitleLabel3, GUILayout.Width(500));
 
-            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, null, GUILayout.Width(widthScaledLeftPanel));
             string sPlayTime = $"{timePosition.Hours:00}:{timePosition.Minutes:00}:{timePosition.Seconds:00}:{timePosition.Milliseconds:000}";
             string sRealDuration = $"{midiFilePlayer.MPTK_Duration.Hours:00}:{midiFilePlayer.MPTK_Duration.Minutes:00}:{midiFilePlayer.MPTK_Duration.Seconds:00}:{midiFilePlayer.MPTK_Duration.Milliseconds:000}";
             string sPosition = $"Time: {sPlayTime} / {sRealDuration}";
@@ -647,6 +715,11 @@ namespace DemoMPTK
                     midiFilePlayer.MPTK_TickCurrent = tick;
                 }
             }
+
+            bool rawseek = GUILayout.Toggle(midiFilePlayer.MPTK_RawSeek, "Raw Seek");
+            if (midiFilePlayer.MPTK_RawSeek != rawseek)
+                midiFilePlayer.MPTK_RawSeek = rawseek;
+
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
         }
 
@@ -657,55 +730,73 @@ namespace DemoMPTK
         private void OnGUI_ModifyMidiAndPlay()
         {
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
-            HelperDemo.GUI_Indent(widthIndent);
-            HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
 
-            GUILayout.Label("When the MIDI is loaded, it's possible to alter the MIDI events brfore playing them. Result not garantee!", myStyle.TitleLabel3);
-
-            countNoteToInsert = (int)HelperDemo.GUI_Slider("Count notes to insert:", (float)countNoteToInsert, 1, 100,
-                alignCaptionRight: false, enableButton: true, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
-
-            tickPositionToInsert = (long)HelperDemo.GUI_Slider("Tick position to insert:", (long)tickPositionToInsert, 0, (long)midiFilePlayer.MPTK_TickLast,
-                alignCaptionRight: false, enableButton: true, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
-
-            if (GUILayout.Button("Insert And Play", GUILayout.Width(120)))
+            //if (true)
+            //{
+            //    MidiVisual = new Texture2D(200, 200, TextureFormat.RGBA32, false);
+            //    // Create a new empty GameObject
+            //    GameObject lineObj = new GameObject();
+            //    // Add the LineRenderer component
+            //    LineRenderer line = lineObj.AddComponent<LineRenderer>();
+            //    // Set the number of points to 2
+            //    line.positionCount = 2;
+            //    // Set the position of the two points
+            //    line.SetPosition(0, new Vector3(0, 0, 0));
+            //    line.SetPosition(1, new Vector3(1, 1, 0));
+            //    lineObj.
+            //}
+            //else
             {
-#if MPTK_PRO
-                // Better to stop the MIDIplaying.
-                midiFilePlayer.MPTK_Stop();
+                HelperDemo.GUI_Indent(widthIndent);
+                HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
 
-                // There is no need of note-off events.
-                midiFilePlayer.MPTK_KeepNoteOff = false;
-                // MPTK_MidiName must contains the name of the MIDI to load.
-                if (midiFilePlayer.MPTK_Load() != null)
+                GUILayout.Label("When the MIDI is loaded, it's possible to alter the MIDI events brfore playing them. Result not garantee!", myStyle.TitleLabel3);
+
+                countNoteToInsert = (int)HelperDemo.GUI_Slider("Count notes to insert:", (float)countNoteToInsert, 1, 100,
+                    alignCaptionRight: false, enableButton: true, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
+
+                tickPositionToInsert = (long)HelperDemo.GUI_Slider("Tick position to insert:", (long)tickPositionToInsert, 0, (long)midiFilePlayer.MPTK_TickLast,
+                    alignCaptionRight: false, enableButton: true, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
+
+                if (GUILayout.Button("Insert And Play", GUILayout.Width(120)))
                 {
-                    Debug.Log($"Duration: {midiFilePlayer.MPTK_Duration.TotalSeconds} seconds");
-                    Debug.Log($"Count MIDI Events: {midiFilePlayer.MPTK_MidiEvents.Count}");
-                    // Insert weird notes in the beautiful MIDI!
-                    for (int insertNote = 1; insertNote <= countNoteToInsert; insertNote++)
-                        midiFilePlayer.MPTK_MidiEvents.Insert(0,
-                            new MPTKEvent()
-                            {
-                                Channel = 0,
-                                Command = MPTKCommand.NoteOn,
-                                Value = 60 + insertNote % 12,
-                                Duration = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote,
-                                Tick = tickPositionToInsert + insertNote * midiFilePlayer.MPTK_DeltaTicksPerQuarterNote
-                            });
-                    // New event has been inserted, MIDI events list must be sorted by tick.
-                    midiFilePlayer.MPTK_SortEvents();
+#if MPTK_PRO
+                    // Better to stop the MIDIplaying.
+                    midiFilePlayer.MPTK_Stop();
 
-                    // ... then play the modified list of events (any garantee to create the hit of the year!).
-                    midiFilePlayer.MPTK_Play(alreadyLoaded: true);
-                }
+                    // There is no need of note-off events.
+                    midiFilePlayer.MPTK_KeepNoteOff = false;
+                    // MPTK_MidiName must contains the name of the MIDI to load.
+                    if (midiFilePlayer.MPTK_Load() != null)
+                    {
+                        Debug.Log($"Duration: {midiFilePlayer.MPTK_Duration.TotalSeconds} seconds");
+                        Debug.Log($"Count MIDI Events: {midiFilePlayer.MPTK_MidiEvents.Count}");
+                        // Insert weird notes in the beautiful MIDI!
+                        for (int insertNote = 1; insertNote <= countNoteToInsert; insertNote++)
+                            midiFilePlayer.MPTK_MidiEvents.Insert(0,
+                                new MPTKEvent()
+                                {
+                                    Channel = 0,
+                                    Command = MPTKCommand.NoteOn,
+                                    Value = 60 + insertNote % 12,
+                                    Duration = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote,
+                                    Tick = tickPositionToInsert + insertNote * midiFilePlayer.MPTK_DeltaTicksPerQuarterNote
+                                });
+                        // New event has been inserted, MIDI events list must be sorted by tick.
+                        midiFilePlayer.MPTK_SortEvents();
 
+                        // Then play the modified list of events (not guaranteed to be the hit of the year!).).
+                        midiFilePlayer.MPTK_Play(alreadyLoaded: true);
+                    }
 
 #else
                 Debug.LogWarning("MIDI preload and alter MIDI events are available only with the PRO version");
 #endif
+                }
+
+                HelperDemo.GUI_Vertical(HelperDemo.Zone.END);
             }
 
-            HelperDemo.GUI_Vertical(HelperDemo.Zone.END);
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
 
         }
@@ -758,9 +849,9 @@ namespace DemoMPTK
         private void OnGUI_PlayPauseStopMIDI()
         {
             // Play/Pause/Stop/Restart actions on midi 
-            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, null, GUILayout.Width(widthScaledLeftPanel));
 
-            if (GUILayout.Button("Previous"))
+            if (GUILayout.Button(myStyle.PreviousMidi))
             {
                 if (IsWaitNotesOff)
                     StartCoroutine(NextPreviousWithWait(false));
@@ -777,7 +868,7 @@ namespace DemoMPTK
                 midiFilePlayer.MPTK_Play();
             GUI.color = Color.white;
 
-            if (GUILayout.Button("Next"))
+            if (GUILayout.Button(myStyle.NextMidi))
             {
                 if (IsWaitNotesOff)
                     StartCoroutine(NextPreviousWithWait(true));
@@ -833,11 +924,12 @@ namespace DemoMPTK
                 midiFilePlayer.MPTK_MidiAutoRestart = false;
                 midiFilePlayer.MPTK_StartPlayAtFirstNote = false;
                 midiFilePlayer.MPTK_ClearAllSound(true);
+                midiFilePlayer.MPTK_RawSeek = false;
             }
 
-            midiFilePlayer.MPTK_StartPlayAtFirstNote = GUILayout.Toggle(midiFilePlayer.MPTK_StartPlayAtFirstNote, "Start First Note");
-            midiFilePlayer.MPTK_MidiAutoRestart = GUILayout.Toggle(midiFilePlayer.MPTK_MidiAutoRestart, "Auto Restart");
-            IsWaitNotesOff = GUILayout.Toggle(IsWaitNotesOff, "Wait Notes Off");
+            midiFilePlayer.MPTK_StartPlayAtFirstNote = GUILayout.Toggle(midiFilePlayer.MPTK_StartPlayAtFirstNote, "Start At First Note");
+            midiFilePlayer.MPTK_MidiAutoRestart = GUILayout.Toggle(midiFilePlayer.MPTK_MidiAutoRestart, "MIDI Auto Restart");
+            IsWaitNotesOff = GUILayout.Toggle(IsWaitNotesOff, "Wait All Notes Off");
 
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
         }
@@ -848,13 +940,17 @@ namespace DemoMPTK
             HelperDemo.GUI_Indent(widthIndent);
             HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
 #if MPTK_PRO
-            GUILayout.Label(beatTimeTick + " " + beatMeasure, myStyle.TitleLabel3);
+            GUILayout.Label($"Plays an extra drum sound with each beat. {beatTimeTick} {beatMeasure}", myStyle.TitleLabel3);
+            // Search for OnBeatEvent in this source code for implementation
 #else
-            GUILayout.Label("Available with Maestro MPTK Pro with OnBeatEvent.", myStyle.TitleLabel3);
+            GUILayout.Label("Plays an extra drum sound with each beat is available with Maestro MPTK Pro.", myStyle.TitleLabel3);
 #endif
+
             volumeMetronome = (int)HelperDemo.GUI_Slider("Beat Volume", volumeMetronome, 0, 127,
                 alignCaptionRight: false, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
             instrumentMetronome = (int)HelperDemo.GUI_Slider("Instrument from Drum", instrumentMetronome, 0, 127,
+                alignCaptionRight: false, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
+            stopPlayingAtMeasure = (int)HelperDemo.GUI_Slider("Stop playing at measure", stopPlayingAtMeasure, -1, 100,
                 alignCaptionRight: false, widthCaption: 170, widthSlider: 250, widthLabelValue: 50);
 
             HelperDemo.GUI_Vertical(HelperDemo.Zone.END);
@@ -867,8 +963,10 @@ namespace DemoMPTK
             HelperDemo.GUI_Indent(widthIndent);
             HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN);
 
-            GUILayout.Label("Set the start and stop points in the MIDI based on tick values. For ease, sliders show values as a percentage of the entire MIDI.OnEventNotesMidi is used for each MIDI event read from the MIDI. This is where the start and stop positions are handled.", myStyle.TitleLabel3);
-            GUILayout.Label("For precise looping in the MIDI, it's better using the Inner Loop features (Pro version).", myStyle.TitleLabel3);
+            GUILayout.Label("Set the start and stop points in the MIDI based on tick values. For ease, " +
+                "sliders show values as a percentage of the entire MIDI.OnEventNotesMidi is used for each MIDI event read from the MIDI. " +
+                "This is where the start and stop positions are handled.\n" +
+                "For precise looping in the MIDI, it's better using the Inner Loop features (Pro version).", myStyle.TitleLabel3);
 
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
 
@@ -917,13 +1015,124 @@ namespace DemoMPTK
 
         }
 
+        private void OnGUI_MidiViewer()
+        {
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
+            HelperDemo.GUI_Indent(widthIndent);
+            HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN);
+
+            GUILayout.Label("Display a simple MIDI viewver. Simple line are created for each note plays from the MIDI.\n" +
+                "  - Note value defined the angle of the line.\n" +
+                "  - Velocity defined the lenght of the line.\n" +
+                "  - Channel defined the color.", myStyle.TitleLabel3);
+
+            ViewerEnabled = GUILayout.Toggle(ViewerEnabled, "Enable MIDI Viewer");
+            if (ViewerEnabled)
+            {
+                NoteViewerCircle.DistanceShadow = HelperDemo.GUI_Slider("   Shadow:", NoteViewerCircle.DistanceShadow, 0f, 1f, false, true, 0.01f, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+                NoteViewerCircle.WidthLine = HelperDemo.GUI_Slider("   Width line:", NoteViewerCircle.WidthLine, 0.01f, 5f, false, true, 0.01f, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+                NoteViewerCircle.GrowingPhase = HelperDemo.GUI_Slider("   Growing phase time:", NoteViewerCircle.GrowingPhase, 0, 2f, false, true, 0.01f, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+                NoteViewerCircle.FadingPhase = HelperDemo.GUI_Slider("   Fading phase time:", NoteViewerCircle.FadingPhase, 0, 2f, false, true, 0.01f, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+            }
+            HelperDemo.GUI_Vertical(HelperDemo.Zone.END);
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
+
+        }
+
+
+        private void OnGUI_InnerLoop()
+        {
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
+            HelperDemo.GUI_Indent(widthIndent);
+            HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN);
+
+            //! [ExampleMidiInnerLoop]
+
+            GUILayout.Label("Define a precise loop between tree tick positions.\n" +
+                "  - Start: first position to start MIDI playback.\n" +
+                "  - Resume: position to restart when the end of the loop is reached.\n" +
+                "  - End: position to loop to resume position.", myStyle.TitleLabel3);
+
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
+            InnerLoopEnabled = GUILayout.Toggle(InnerLoopEnabled, "   Enable Inner Loop");
+            InnerLoopLog = GUILayout.Toggle(InnerLoopLog, "Log Inner Loop");
+            if (GUILayout.Button("Reset Inner Loop"))
+            {
+                InnerSlider = 4;
+                InnerLoopStart = InnerLoopResume = InnerLoopEnd = 0;
+            }
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
+
+            if (InnerLoopEnabled)
+            {
+                // Defining the User Interface
+                // ____________________________
+
+                HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
+                GUILayout.Label($"Loop Count: {InnerLoopCount,-3}", myStyle.TitleLabel3, GUILayout.Width(120));
+                GUILayout.Label($"Current Tick: {midiFilePlayer.MPTK_TickCurrent,-5}", myStyle.TitleLabel3, GUILayout.Width(160));
+                GUILayout.Label($"Current Time: {Math.Round(midiFilePlayer.MPTK_Position / 1000d, 2),-5}", myStyle.TitleLabel3, GUILayout.Width(160));
+
+                // Define a value for the +/- button on the slider.
+                // For the sake of simplicity, assume that the time signature is 4/4. So a quarter = DeltaTicksPerQuarterNote.
+                long deltaTicks = 1;
+                string sliderText = "";
+                switch (InnerSlider)
+                {
+                    case 1: deltaTicks = 1; sliderText = "Slider by one tick"; break;
+                    case 2: deltaTicks = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote / 4; sliderText = $"Slider by Sixteenth ({deltaTicks} ticks):"; break;
+                    case 3: deltaTicks = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote / 2; sliderText = $"Slider by Eighth ({deltaTicks} ticks):"; break;
+                    case 4: deltaTicks = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote; sliderText = $"Slider by Quarter ({deltaTicks} ticks):"; break;
+                    case 5: deltaTicks = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote * 2; sliderText = $"Slider by Half ({deltaTicks} ticks):"; break;
+                    case 6: deltaTicks = midiFilePlayer.MPTK_DeltaTicksPerQuarterNote * 4; sliderText = $"Slider by Whole ({deltaTicks} ticks):"; break;
+                }
+                InnerSlider = (int)HelperDemo.GUI_Slider(sliderText, InnerSlider, 1, 6, false, enableButton: true, valueButton: 1, widthCaption: 200, widthSlider: 50, widthLabelValue: 0);
+                HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
+
+                // Change start playing resume loop, end loop. Add a deltaticks between Resume and End ticks position
+                InnerLoopStart = (long)HelperDemo.GUI_Slider("Start from:", InnerLoopStart, 0, midiFilePlayer.MPTK_TickLast, false, true, deltaTicks, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+
+                if (InnerLoopResume < InnerLoopStart)
+                    InnerLoopResume = InnerLoopStart;
+                InnerLoopResume = (long)HelperDemo.GUI_Slider("Resume loop at:", InnerLoopResume, 0, midiFilePlayer.MPTK_TickLast, false, true, deltaTicks, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+
+                if (InnerLoopEnd < InnerLoopResume)
+                    InnerLoopEnd = InnerLoopResume + deltaTicks;
+                InnerLoopEnd = (long)HelperDemo.GUI_Slider("Loop end at:", InnerLoopEnd, 0, midiFilePlayer.MPTK_TickLast, false, true, deltaTicks, widthCaption: 200, widthSlider: 400, widthLabelValue: 100);
+            }
+#if MPTK_PRO
+
+            // Apply selected values to the inner loop
+            // _______________________________________
+
+
+            // Don't forget to define midiFilePlayer somewhere (by script or from the prefab MidiFilePlayer inspector).
+            // Example: MidiFilePlayer midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            // InnerLoop works also with MidiExternalPlayer prefab.
+
+            midiFilePlayer.MPTK_InnerLoop.Enabled = InnerLoopEnabled;
+            midiFilePlayer.MPTK_InnerLoop.Log = InnerLoopLog;
+            midiFilePlayer.MPTK_InnerLoop.Start = InnerLoopStart;
+            midiFilePlayer.MPTK_InnerLoop.Resume = InnerLoopResume;
+            midiFilePlayer.MPTK_InnerLoop.End = InnerLoopEnd;
+            InnerLoopCount = midiFilePlayer.MPTK_InnerLoop.Count;
+#endif
+            //! [ExampleMidiInnerLoop]
+
+            HelperDemo.GUI_Vertical(HelperDemo.Zone.END);
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
+
+        }
+
         private void OnGUI_RealTimeMIDIChange()
         {
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, myStyle.BacgDemosLight);
             HelperDemo.GUI_Indent(widthIndent);
             HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN);
 
-            GUILayout.Label("OnMidiEvent callback is used before the MIDI event goes to the MIDI Synth. This is where you can modify the MIDI event. Check out the examples below and feel free to get creative!", myStyle.TitleLabel3);
+            GUILayout.Label("OnMidiEvent callback is used before the MIDI event goes to the MIDI Synth. " +
+                "This is where you can modify the MIDI event\n." +
+                "Check out the examples below and feel free to get creative!", myStyle.TitleLabel3);
 
             HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
             GUILayout.Label("Transpose one octave depending on the channel value and disable drum.", myStyle.TitleLabel3, GUILayout.Width(400));
@@ -956,6 +1165,7 @@ namespace DemoMPTK
 
             //! [ExampleUsingChannelAPI_6]
 
+            // Also available for MidiStreamPlayer, MidiInReader, MidiExternalPlayer.
             if (GUILayout.Button("Enable All", GUILayout.Width(100)))
                 midiFilePlayer.MPTK_Channels.EnableAll = true;
 
@@ -964,6 +1174,7 @@ namespace DemoMPTK
 
             //! [ExampleUsingChannelAPI_6]
 
+            // Also available for MidiStreamPlayer, MidiInReader, MidiExternalPlayer.
             if (GUILayout.Button("Default All", GUILayout.Width(100)))
                 midiFilePlayer.MPTK_Channels.ResetExtension();
 
@@ -985,6 +1196,7 @@ namespace DemoMPTK
 
             GUILayout.Label("Channel   Preset Name                                   Preset / Bank                                  Count    Enabled       Volume", myStyle.TitleLabel3);
 
+            // Also available for MidiStreamPlayer, MidiInReader, MidiExternalPlayer.
             for (int channel = 0; channel < midiFilePlayer.MPTK_Channels.Length; channel++)
             {
                 HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN);
@@ -1130,29 +1342,6 @@ namespace DemoMPTK
             yield return 0;
         }
 
-        void Update()
-        {
-            if (midiFilePlayer != null && midiFilePlayer.MPTK_IsPlaying)
-            {
-                //
-                // There is no UI for these random change, to be enabled from the inspector
-                // 
-                float time = Time.realtimeSinceStartup - LastTimeChange;
-                if (DelayRandomSecond > 0f && time > DelayRandomSecond)
-                {
-                    // It's time to apply Random change
-                    LastTimeChange = Time.realtimeSinceStartup;
 
-                    // Random position
-                    if (IsRandomPosition) midiFilePlayer.MPTK_Position = UnityEngine.Random.Range(0f, (float)midiFilePlayer.MPTK_Duration.TotalMilliseconds);
-
-                    // Random Speed
-                    if (IsRandomSpeed) midiFilePlayer.MPTK_Speed = UnityEngine.Random.Range(0.1f, 5f);
-
-                    // Random transpose
-                    if (IsRandomTranspose) midiFilePlayer.MPTK_Transpose = UnityEngine.Random.Range(-12, 13);
-                }
-            }
-        }
     }
 }

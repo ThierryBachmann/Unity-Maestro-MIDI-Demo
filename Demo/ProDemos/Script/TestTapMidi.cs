@@ -11,6 +11,9 @@ namespace MPTKDemoEuclidean
     IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         public MidiFilePlayer midiFilePlayer;
+        /// <summary>
+        /// If NoteToPlay is < 0, the pitch of the note is defined by the X position on the zone (between 48=C4 and 72=C6)
+        /// </summary>
         public int NoteToPlay = -1;
         public int LastPitch = 0;
         public int LastVelocity = 0;
@@ -58,7 +61,7 @@ namespace MPTKDemoEuclidean
 
         public virtual void OnPointerUp(PointerEventData eventData)
         {
-            //Debug.Log("OnPointerUp");
+            //Debug.Log("OnPointerUp" + eventData.pointerCurrentRaycast.gameObject.name);
             StopAll();
         }
 
@@ -109,6 +112,8 @@ namespace MPTKDemoEuclidean
                 ret = true;
 
             }
+            else
+                Debug.LogWarning("No gameObject found");
             return ret;
         }
 
@@ -129,10 +134,10 @@ namespace MPTKDemoEuclidean
         {
             MPTKEvent mptkEvent;
 
-            int velocity = NoteToPlay < 0 ? 20 + (int)(107f * ry) : 100;
-            int pitch = NoteToPlay < 0 ? (int)Mathf.Lerp(50, 72, rx) : NoteToPlay;
+            int velocity = NoteToPlay < 0 ? 30 + (int)(107f * ry) : 100;
+            int pitch = NoteToPlay < 0 ? (int)Mathf.Lerp(48, 72, rx) : NoteToPlay;
 
-            if (LastPitch != pitch && LastVelocity != velocity)
+            //if (LastPitch != pitch && LastVelocity != velocity)
             {
                 LastPitch = pitch;
                 LastVelocity = velocity;
@@ -145,7 +150,7 @@ namespace MPTKDemoEuclidean
                     // Take time as soon as event has been detected
                     Tag = DateTime.UtcNow.Ticks,
                 };
-                Debug.Log($"Play note pitch:{pitch} velocity:{velocity}");
+                //Debug.Log($"Play note x:{rx} y:{ry} pitch:{pitch} velocity:{velocity}");
                 playerEvents.Add(mptkEvent);
                 midiFilePlayer.MPTK_PlayDirectEvent(mptkEvent);
             }

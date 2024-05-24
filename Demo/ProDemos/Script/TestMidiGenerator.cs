@@ -25,22 +25,25 @@ namespace DemoMPTK
         {
             if (!HelperDemo.CheckSFExists()) return;
 
+            Vector3 scale = HelperDemo.GUIScale();
+
             // Set custom Style. Good for background color 3E619800
             if (myStyle == null) myStyle = new CustomStyle();
 
-            MainMenu.Display("Create a MIDI messages by Algo, Write to a MIDI file, Play", myStyle, "https://paxstellar.fr/class-midifilewriter2/");
+            MainMenu.Display("Create a MIDI messages by Algo, Write to a MIDI file, Play", myStyle, Screen.width / scale.x, "https://paxstellar.fr/class-midifilewriter2/");
 
-            GUILayout.BeginVertical(myStyle.BacgDemosLight);
-            GUILayout.Label("Write the generated notes to a Midi file and play with a MidiExternalPlay Prefab or play the generated notes with MidiFilePlayer Prefab, no file is created.", myStyle.TitleLabel2Centered);
-            GUILayout.Label("A low pass effect is enabled with MidiExternalPlay prefab also it sound differently that MidiFilePlayer prefab. See inspector.", myStyle.TitleLabel2Centered);
+            GUILayout.BeginVertical(myStyle.BacgDemosLight, GUILayout.Width(Screen.width / scale.x), GUILayout.Height(Screen.height / scale.y - 160));
+            GUILayout.Label("Write the generated notes to a Midi file and play with a MidiExternalPlay Prefab or play the generated notes with MidiFilePlayer Prefab, no file is created.", myStyle.TitleLabel2Centered, GUILayout.Width(Screen.width / scale.x));
+            GUILayout.Label("A low pass effect is enabled with MidiExternalPlay prefab also it sound differently that MidiFilePlayer prefab. See inspector.", myStyle.TitleLabel2Centered, GUILayout.Width(Screen.width / scale.x));
 
-            scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(Screen.width));
+            scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(Screen.width / scale.x));
             GUIExample(CreateMidiStream_four_notes_milli, "Very simple stream - 4 notes of 500 milliseconds created every 500 milliseconds", "Generated - Milli - Four notes every 500 milliseconds");
             GUIExample(CreateMidiStream_four_notes_ticks, "Very simple stream - 4 consecutives quarters created independantly of the tempo (absolute tick position)", "Generated - Tick - Four consecutive quarters");
             GUIExample(CreateMidiStream_preset_tempo_pitchWheel, "A more complex one - Preset change, Tempo change, Pitch Wheel change, Modulation change, Lyric, Time Signature", "Generated - Tick - Preset, Tempo, Pitch, Modulation, Lyric, Time Signature");
             GUIExample(CreateMidiStream_Chords, "Chords with violin - tonic C major with progression I V IV V - C minor I VIm IIm V - 4 chords with piano from the Maestro library CM DmM7 Gm7b5 FM7", "Generated - Tick - Chords with violin");
             GUIExample(CreateMidiStream_sandbox, "Sandbox - make your trial", "Generated - Sandbox - make your trial");
             GUIExample(CreateMidiStream_silence, "TU - silence at the end", "Generated - Tick - Silence at the end");
+            GUIExample(CreateMidiStream_all_notes, "TU - Full Notes from 30 to 127 with velocity from 20 to 127", "Generated - Full Notes");
             GUIExample(CreateMidiStream_full_crescendo, "TU - full velocity crescendo from 0 to 127", "Generated - Tick - Full velocity crescendo from 0 to 127");
             GUIExample(CreateMidiStream_short_crescendo_with_noteoff_tick, "TU - short velocity crescendo millisecond (250 ms, Quarter by 4)", "Generated - Tick - Short velocity crescendo with noteoff");
             GUIExample(CreateMidiStream_short_crescendo_with_noteoff_ms, "TU - short velocity crescendo millisecond (250 milliseconds)", "Generated - Milli - Short velocity crescendo with noteoff");
@@ -59,9 +62,9 @@ namespace DemoMPTK
             GUILayout.EndVertical();
             GUILayout.EndScrollView();
 
-            GUILayout.BeginVertical(myStyle.BacgDemosLight);
+            GUILayout.BeginVertical(myStyle.BacgDemosLight, GUILayout.Width(Screen.width / scale.x), GUILayout.Height(Screen.height / scale.y));
 
-            GUILayout.BeginHorizontal(myStyle.BacgDemosLight);
+            GUILayout.BeginHorizontal();// myStyle.BacgDemosLight, GUILayout.Width(Screen.width / scale.x));
 
             float height = 40;
             if (GUILayout.Button(midiAutoRestart ? "MIDI Auto Restart" : "One Shot", GUILayout.Height(height)))
@@ -79,7 +82,7 @@ namespace DemoMPTK
 
             if (GUILayout.Button("Open Folder Maestro MIDI DB", GUILayout.Height(height)))
                 Application.OpenURL("file://" + Path.Combine(Application.dataPath, MidiPlayerGlobal.PathToMidiFile));
-
+            GUILayout.Space(5);
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
 
@@ -617,6 +620,38 @@ namespace DemoMPTK
             return mfw;
         }
 
+        /// <summary>@brief
+        /// Midi Generated with MPTK for unitary test
+        /// </summary>
+        /// <returns></returns>
+        private MPTKWriter CreateMidiStream_all_notes()
+        {
+            int ticksPerQuarterNote = 500;
+
+            MPTKWriter mfw = new MPTKWriter(ticksPerQuarterNote, 1);
+
+            long absoluteTime = 0;
+
+            mfw.AddBPMChange(track: 0, absoluteTime, 480);
+            mfw.AddChangePreset(track: 1, absoluteTime, channel: 0, preset: 0);
+
+            int velocity = 20;
+            while (true)
+            {
+                velocity += 20;
+                if (velocity > 127) velocity = 127;
+                Debug.Log($"velocity={velocity}");
+                for (int note = 0; note <= 127; note += 1)
+                {
+                    // Duration = 1 second for a quarter at BPM 60
+                    mfw.AddNote(track: 1, absoluteTime, channel: 0, note: note, velocity: velocity, length: ticksPerQuarterNote);
+                    absoluteTime += ticksPerQuarterNote; // Next note will be played one quarter after the previous (time signature is 4/4)
+                }
+                if (velocity >= 127)
+                    break;
+            }
+            return mfw;
+        }
         /// <summary>@brief
         /// Midi Generated with MPTK for unitary test
         /// </summary>

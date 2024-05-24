@@ -66,7 +66,6 @@ namespace DemoMVP
         #endregion
 
 
-        //! [ExampleMidiInnerLoop]
         // Full source code in TestInnerLoop.cs
         // As usual with a MVP demo, focus is on the essentials:
         //     - no value check, 
@@ -155,6 +154,5 @@ namespace DemoMVP
             }
         }
 
-        //! [ExampleMidiInnerLoop]
     }
 }

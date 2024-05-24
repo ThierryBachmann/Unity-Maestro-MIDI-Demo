@@ -1377,6 +1377,7 @@ MonoBehaviour:
   AudioBufferLenght: 0
   AudioNumBuffers: 0
   AudioEngine: FMOD
+  OutputRate: 0
   playOnlyFirstWave: 0
   playNoteOff: 0
   MPTK_EnablePresetDrum: 0
@@ -1417,7 +1418,6 @@ MonoBehaviour:
   StatSampleWriteAVG: 0
   StatProcessListMS: 0
   StatProcessListAVG: 0
-  StatusStat: 
   keepPlayingNonLooped: 0
   MPTK_CorePlayer: 1
   MPTK_AudioSettingFromUnity: 1
@@ -1429,6 +1429,7 @@ MonoBehaviour:
   maxDistance: 2500
   MPTK_EnablePanChange: 0
   volumeGlobal: 0.625
+  dsp_64: 0
   MPTK_LogEvents: 0
   MPTK_LogWave: 0
   MPTK_StatVoiceCountPlaying: 0
@@ -1450,7 +1451,9 @@ MonoBehaviour:
   VerboseKillByExclusive: 0
   VerboseGenerator: 0
   VerboseCalcGen: 0
-  VerboseCalcADSR: 0
+  VerboseCalcMod: 0
+  VerboseCalcVolADSR: 0
+  VerboseCalcModADSR: 0
   VerboseController: 0
   VerboseEnvVolume: 0
   VerboseEnvModulation: 0
@@ -1469,17 +1472,19 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   showMidiInfo: 0
-  showSynthParameter: 1
-  showSpatialization: 1
+  showSynthParameter: 0
+  showSpatialization: 0
   showUnitySynthParameter: 0
   showUnityPerformanceParameter: 1
-  showSoundFontEffect: 1
-  showUnitySynthEffect: 1
+  showSoundFontEffect: 0
+  showUnitySynthEffect: 0
   showMidiParameter: 0
   showSynthEvents: 0
   showEvents: 0
   showDefault: 0
   spatialize: 1
+  histoDspSize: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  histoCurrent: 0
   MPTK_EffectSoundFont: {fileID: 1519015820}
   MPTK_EffectUnity: {fileID: 1958545731}
   MPTK_ModeSpatializer: 1
@@ -1499,6 +1504,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   OnEventStartPlayMidi:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEventEndPlayMidi:
     m_PersistentCalls:
       m_Calls: []
   quantization: 0
@@ -3878,7 +3886,7 @@ MonoBehaviour:
   filterQModOffset: 0
   applySFReverb: 0
   applySFChorus: 0
-  applySFFilter: 0
+  applySFFilter: 1
   sfReverbRoomSize: 0.2
   sfReverbDamp: 0
   sfReverbWidth: 0.5

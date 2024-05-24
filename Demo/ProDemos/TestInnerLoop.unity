@@ -310,7 +310,7 @@ MonoBehaviour:
   filterQModOffset: 0
   applySFReverb: 0
   applySFChorus: 0
-  applySFFilter: 0
+  applySFFilter: 1
   sfReverbRoomSize: 0.2
   sfReverbDamp: 0
   sfReverbWidth: 0.5
@@ -1232,6 +1232,7 @@ MonoBehaviour:
   AudioBufferLenght: 0
   AudioNumBuffers: 0
   AudioEngine: FMOD
+  OutputRate: 0
   playOnlyFirstWave: 0
   playNoteOff: 0
   MPTK_EnablePresetDrum: 0
@@ -1283,6 +1284,7 @@ MonoBehaviour:
   maxDistance: 0
   MPTK_EnablePanChange: 1
   volumeGlobal: 0.5
+  dsp_64: 0
   MPTK_LogEvents: 0
   MPTK_LogWave: 0
   MPTK_StatVoiceCountPlaying: 0
@@ -1304,7 +1306,9 @@ MonoBehaviour:
   VerboseKillByExclusive: 0
   VerboseGenerator: 0
   VerboseCalcGen: 0
-  VerboseCalcADSR: 0
+  VerboseCalcMod: 0
+  VerboseCalcVolADSR: 0
+  VerboseCalcModADSR: 0
   VerboseController: 0
   VerboseEnvVolume: 0
   VerboseEnvModulation: 0
@@ -1334,6 +1338,8 @@ MonoBehaviour:
   showEvents: 0
   showDefault: 0
   spatialize: 0
+  histoDspSize: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  histoCurrent: 0
   MPTK_EffectSoundFont: {fileID: 568501745}
   MPTK_EffectUnity: {fileID: 790334933}
   MPTK_ModeSpatializer: 0
@@ -1353,6 +1359,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   OnEventStartPlayMidi:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEventEndPlayMidi:
     m_PersistentCalls:
       m_Calls: []
   quantization: 0

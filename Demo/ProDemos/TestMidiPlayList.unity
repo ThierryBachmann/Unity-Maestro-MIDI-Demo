@@ -2755,7 +2755,7 @@ MonoBehaviour:
   filterQModOffset: 0
   applySFReverb: 0
   applySFChorus: 0
-  applySFFilter: 0
+  applySFFilter: 1
   sfReverbRoomSize: 0.2
   sfReverbDamp: 0
   sfReverbWidth: 0.5
@@ -3553,7 +3553,7 @@ MonoBehaviour:
   filterQModOffset: 0
   applySFReverb: 0
   applySFChorus: 0
-  applySFFilter: 0
+  applySFFilter: 1
   sfReverbRoomSize: 0.2
   sfReverbDamp: 0
   sfReverbWidth: 0.5

@@ -492,8 +492,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 474706237}
   m_HandleRect: {fileID: 474706236}
   m_Direction: 0
-  m_Value: 0.0000005000149
-  m_Size: 0.58555907
+  m_Value: 0.0000005000148
+  m_Size: 0.585559
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -1263,7 +1263,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 68024809}
   m_Direction: 2
   m_Value: 1
-  m_Size: 0.18555534
+  m_Size: 0.18555535
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -3210,7 +3210,7 @@ MonoBehaviour:
   filterQModOffset: 0
   applySFReverb: 0
   applySFChorus: 0
-  applySFFilter: 0
+  applySFFilter: 1
   sfReverbRoomSize: 0.2
   sfReverbDamp: 0
   sfReverbWidth: 0.5
@@ -5103,12 +5103,12 @@ PrefabInstance:
     - target: {fileID: 114676593232834628, guid: a544bde1c354b7f4caf3c16f0756ec6a,
         type: 3}
       propertyPath: showSynthParameter
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 114676593232834628, guid: a544bde1c354b7f4caf3c16f0756ec6a,
         type: 3}
       propertyPath: showSoundFontEffect
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 114676593232834628, guid: a544bde1c354b7f4caf3c16f0756ec6a,
         type: 3}
@@ -5118,7 +5118,7 @@ PrefabInstance:
     - target: {fileID: 114676593232834628, guid: a544bde1c354b7f4caf3c16f0756ec6a,
         type: 3}
       propertyPath: showUnitySynthEffect
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a544bde1c354b7f4caf3c16f0756ec6a, type: 3}
@@ -5285,8 +5285,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 356089925}
   m_HandleRect: {fileID: 356089924}
   m_Direction: 0
-  m_Value: 0.00000058335064
-  m_Size: 0.57079226
+  m_Value: 0.000000500015
+  m_Size: 0.5707923
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -6154,7 +6154,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 436692913}
   m_Direction: 2
   m_Value: 0.9999999
-  m_Size: 0.18744105
+  m_Size: 0.18744108
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -6646,8 +6646,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1037383237}
   m_HandleRect: {fileID: 1037383236}
   m_Direction: 0
-  m_Value: 0.0000002500074
-  m_Size: 0.5707922
+  m_Value: 0.00000033334334
+  m_Size: 0.5707923
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -6811,7 +6811,7 @@ MonoBehaviour:
   m_HandleRect: {fileID: 1260566948}
   m_Direction: 2
   m_Value: 0.9999999
-  m_Size: 0.18744105
+  m_Size: 0.18744108
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:

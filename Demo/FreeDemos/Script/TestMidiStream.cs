@@ -389,9 +389,9 @@ namespace DemoMPTK
 
         void OnGUI()
         {
-            GUIUtility.ScaleAroundPivot(scale, pivotPoint);
-            //Debug.Log($"{Screen.width} x {Screen.height} safeArea:{Screen.safeArea} ScreenToGUIRect:{GUIUtility.ScreenToGUIRect(Screen.safeArea)}");
-            // Set custom Style.
+
+            Vector3 scale = HelperDemo.GUIScale();
+
             if (myStyle == null) { myStyle = new CustomStyle(); HelperDemo.myStyle = myStyle; }
 
             // midiStreamPlayer must be defined with the inspector of this gameObject 
@@ -399,7 +399,8 @@ namespace DemoMPTK
             if (midiStreamPlayer != null)
             {
 
-                scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(Screen.width));
+                // +25 to avoid useless HScroll
+                scrollerWindow = GUILayout.BeginScrollView(scrollerWindow, false, false, GUILayout.Width(Screen.width / scale.x ), GUILayout.Height(Screen.height / scale.y));
 
                 HelperDemo.GUI_Horizontal(HelperDemo.Zone.INIT);
                 HelperDemo.GUI_Vertical(HelperDemo.Zone.INIT);
@@ -416,10 +417,10 @@ namespace DemoMPTK
                     for (int i = 0; i < nbrGenerator; i++)
                         PopGenerator[i].Draw(GenModifier.RealTimeGenerator, indexGenerator[i], myStyle);
 
-                    MainMenu.Display("Test MIDI Stream - A very simple Generated Music Stream ", myStyle, "https://paxstellar.fr/midi-file-player-detailed-view-2-2/");
+                    MainMenu.Display("Test MIDI Stream - A very simple Generated Music Stream ", myStyle, Screen.width / scale.x, "https://paxstellar.fr/midi-file-player-detailed-view-2-2/");
 
                     // Display soundfont available and select a new one
-                    GUISelectSoundFont.Display(scrollerWindow, myStyle);
+                    GUISelectSoundFont.Display(scrollerWindow, myStyle, Screen.width / scale.x);
 
                     HelperDemo.GUI_Vertical(HelperDemo.Zone.BEGIN, myStyle.BacgDemosMedium);
 
@@ -507,11 +508,7 @@ namespace DemoMPTK
                 // ------------------------
                 FoldOutEffectSoundFontDisplay = GUILayout.Toggle(FoldOutEffectSoundFontDisplay, "Enable SoundFont Effects");
                 if (FoldOutEffectSoundFontDisplay)
-#if MPTK_PRO
                     HelperDemo.GUI_EffectSoundFont(widthIndent, midiStreamPlayer.MPTK_EffectSoundFont);
-#else
-                    HelperDemo.GUI_EffectSoundFont(widthIndent);
-#endif
 
                 //
                 // Enable Unity effects

@@ -480,6 +480,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1016371550499557668, guid: 807f701fdfef6034f93765282944eabe,
         type: 3}
+      propertyPath: showSoundFontEffect
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1016371550499557668, guid: 807f701fdfef6034f93765282944eabe,
+        type: 3}
       propertyPath: MPTK_EffectSoundFont
       value: 
       objectReference: {fileID: 2037915867}
@@ -508,7 +513,7 @@ MonoBehaviour:
   filterQModOffset: 0
   applySFReverb: 0
   applySFChorus: 0
-  applySFFilter: 0
+  applySFFilter: 1
   sfReverbRoomSize: 0.2
   sfReverbDamp: 0
   sfReverbWidth: 0.5

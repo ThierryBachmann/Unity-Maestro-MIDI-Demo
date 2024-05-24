@@ -26,7 +26,7 @@ namespace DemoMPTK
             // return true;
         }
 
-        static public void Display(Vector2 scrollerWindow, CustomStyle myStyle)
+        static public void Display(Vector2 scrollerWindow, CustomStyle myStyle, float width)
         {
             SoundFonts = new List<MPTKListItem>();
             if (MidiPlayerGlobal.MPTK_ListSoundFont == null) return;
@@ -49,8 +49,8 @@ namespace DemoMPTK
             if (SoundFonts != null)
             {
                 PopSoundFont.Draw(SoundFonts, selectedSf, myStyle);
-                GUILayout.BeginHorizontal(myStyle.BacgDemosMedium);
-                GUILayout.Space(20);
+                GUILayout.BeginHorizontal(myStyle.BacgDemosMedium, GUILayout.Width(width));
+                //GUILayout.Space(20);
                 float height = 30;
                 if (MidiPlayerGlobal.ImSFCurrent != null)
                 {
@@ -58,8 +58,8 @@ namespace DemoMPTK
                         GUILayout.Label("Live SoundFont: " + MidiPlayerGlobal.ImSFCurrent.SoundFontName, myStyle.TitleLabel2, GUILayout.Height(height));
                     else
                     {
-                        string currentSF="Current SoundFont: " + MidiPlayerGlobal.CurrentMidiSet.ActiveSounFontInfo.Name;
-                        if (GUILayout.Button(currentSF,  GUILayout.Height(height)))
+                        GUILayout.Label($"Select a SoundFont:", myStyle.TitleLabel3, GUILayout.Width(80));
+                        if (GUILayout.Button(MidiPlayerGlobal.CurrentMidiSet.ActiveSounFontInfo.Name,  GUILayout.Height(height)))
                             PopSoundFont.Show = !PopSoundFont.Show;
                     }
                     GUILayout.Label(string.Format("Load Time:{0} s    Samples:{1} s    Count Presets:{2}   Samples:{3}",

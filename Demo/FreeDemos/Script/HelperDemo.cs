@@ -96,7 +96,7 @@ namespace DemoMPTK
             Rect rectLabel = GUILayoutUtility.GetLastRect();
             GUI.color = savedColor;
             GUI.backgroundColor = savedBackColor;
-            if (GUI.Button(new Rect(rectLabel.width - 68, rectLabel.y+1, 75, 20), "Reset Stat"))
+            if (GUI.Button(new Rect(rectLabel.width - 68, rectLabel.y + 1, 75, 20), "Reset Stat"))
                 synth.MPTK_ResetStat();
         }
 
@@ -287,8 +287,12 @@ namespace DemoMPTK
         static public int CountHorizontal;
         static public int CountVertical;
 
-#if MPTK_PRO
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="indent"></param>
+        /// <param name="effectSF">from midiFilePlayer.MPTK_EffectSoundFont or midiStreamPlayer.MPTK_EffectSoundFont</param>
         static public void GUI_EffectSoundFont(float indent, MPTKEffectSoundFont effectSF)
         {
             GUI_Horizontal(Zone.BEGIN, myStyle.BacgDemosLight);
@@ -296,54 +300,130 @@ namespace DemoMPTK
             GUI_Indent(indent);
 
             GUI_Vertical(Zone.BEGIN);
+#if MPTK_PRO
             GUILayout.Label("The effects of the soundfont are part of the design of each instrument. The designer carefully chose them to give the samples the best sound without too much emphasis, but as close as possible to the real sound.", myStyle.TitleLabel3);
-            //GUILayout.Label("There are three kinds of effects: low-pass filter, reverb, chorus. These parameters can be specifics for each instruments and even each notes.", myStyle.TitleLabel3);
+            GUILayout.Label("These effects are defined for each voice, MPTK can change these default values but they will be applied to the overall MIDI. Fast changes when playing can cause clattering or poor sound.", myStyle.TitleLabel3);
+            const float widthCaption = 170;
+            const float widthSlider = 500;
+            const float widthLabelValue = 50;
+#else
+            GUILayout.Label("The effects of the soundfont are part of the design of each instrument. The designer carefully chose them to give the samples the best sound without too much emphasis, but as close as possible to the real sound.", myStyle.TitleLabel3);
+            GUILayout.Label("Maestro MPTK Pro lets you change the default values.", myStyle.TitleLabel3);
+#endif
 
-            GUI_Horizontal(Zone.BEGIN);
-            effectSF.EnableFilter = GUILayout.Toggle(effectSF.EnableFilter, "Enable Low Pass Filter");
-            effectSF.EnableReverb = GUILayout.Toggle(effectSF.EnableReverb, "Enable Reverb");
-            effectSF.EnableChorus = GUILayout.Toggle(effectSF.EnableChorus, "Enable Chorus");
+            GUI_Horizontal(Zone.BEGIN, null, GUILayout.ExpandWidth(false));
+            effectSF.EnableFilter = GUILayout.Toggle(effectSF.EnableFilter, "Enable Low Pass Filter", GUILayout.Width(155));
+#if MPTK_PRO
+            if (GUILayout.Button("Set Default Value", GUILayout.Width(150)))
+                effectSF.DefaultFilter();
             GUI_Horizontal(Zone.END);
+            if (effectSF.EnableFilter)
+            {
+                effectSF.FilterFreqOffset = HelperDemo.GUI_Slider("      Offset Frequency (Hz):", effectSF.FilterFreqOffset, -1000, 3000, false, true, 1, widthCaption, widthSlider, widthLabelValue);
+                effectSF.FilterQModOffset = HelperDemo.GUI_Slider("      Offset Quality Factor:", effectSF.FilterQModOffset, -30, 30, false, true, 1, widthCaption, widthSlider, widthLabelValue);
+            }
+#else
+            GUI_Horizontal(Zone.END);
+#endif
+
+            GUILayout.Space(10);
+            GUI_Horizontal(Zone.BEGIN, null, GUILayout.ExpandWidth(false));
+            effectSF.EnableReverb = GUILayout.Toggle(effectSF.EnableReverb, "Enable Reverb", GUILayout.Width(155));
+#if MPTK_PRO
+            if (GUILayout.Button("Set Default Value", GUILayout.Width(150)))
+                effectSF.DefaultReverb();
+            GUI_Horizontal(Zone.END);
+            if (effectSF.EnableReverb)
+            {
+                effectSF.ReverbAmplify = HelperDemo.GUI_Slider("      Offset Send SF Default:", effectSF.ReverbAmplify, -1, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ReverbLevel = HelperDemo.GUI_Slider("      Level:", effectSF.ReverbLevel, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ReverbRoomSize = HelperDemo.GUI_Slider("      Room Size (s):", effectSF.ReverbRoomSize, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ReverbDamp = HelperDemo.GUI_Slider("      Damp:", effectSF.ReverbDamp, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ReverbWidth = HelperDemo.GUI_Slider("      Width:", effectSF.ReverbWidth, 0, 100, false, true, 1, widthCaption, widthSlider, widthLabelValue);
+            }
+#else
+            GUI_Horizontal(Zone.END);
+#endif
+
+            GUILayout.Space(10);
+            GUI_Horizontal(Zone.BEGIN, null, GUILayout.ExpandWidth(false));
+            effectSF.EnableChorus = GUILayout.Toggle(effectSF.EnableChorus, "Enable Chorus", GUILayout.Width(155));
+#if MPTK_PRO
+            if (GUILayout.Button("Set Default Value", GUILayout.Width(150)))
+                effectSF.DefaultChorus();
+            GUI_Horizontal(Zone.END);
+            if (effectSF.EnableChorus)
+            {
+                effectSF.ChorusAmplify = HelperDemo.GUI_Slider("      Offset Send SF Default:", effectSF.ChorusAmplify, -1, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ChorusLevel = HelperDemo.GUI_Slider("      Level:", effectSF.ChorusLevel, 0, 10, false, true, valueButton: 0.1f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ChorusSpeed = HelperDemo.GUI_Slider("      Speed (Hz):", effectSF.ChorusSpeed, 0.1f, 5, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ChorusDepth = HelperDemo.GUI_Slider("      Depth:", effectSF.ChorusDepth, 0, 256, false, true, valueButton: 1, widthCaption, widthSlider, widthLabelValue);
+                effectSF.ChorusWidth = HelperDemo.GUI_Slider("      Width:", effectSF.ChorusWidth, 0, 10, false, true, valueButton: 0.1f, widthCaption, widthSlider, widthLabelValue);
+            }
+#else
+            GUI_Horizontal(Zone.END);
+#endif
 
             GUI_Vertical(Zone.END);
 
             GUI_Horizontal(Zone.END);
         }
 
-        static public void GUI_EffectUnity(float indent, MPTKEffectUnity effect)
-        {
-            GUI_Horizontal(Zone.BEGIN, myStyle.BacgDemosLight);
+#if MPTK_PRO
 
-            GUI_Indent(indent);
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="indent"></param>
+        /// <param name="effectSF">from midiFilePlayer.MPTK_EffectSoundFont or midiStreamPlayer.MPTK_EffectSoundFont</param>
+        static public void GUI_EffectUnity(float indent, MPTKEffectUnity effectUnity)
+        {
+            const float widthCaption = 170;
+            const float widthSlider = 500;
+            const float widthLabelValue = 50;
+
+            GUI_Horizontal(Zone.BEGIN, myStyle.BacgDemosLight);
 
             GUI_Vertical(Zone.BEGIN);
 
             GUILayout.Label("Unity effects applied to all instruments/presets playing in the Maestro Prefab.", myStyle.TitleLabel3);
 
-            effect.EnableReverb = GUILayout.Toggle(effect.EnableReverb, "Enable Reverb");
-            if (effect.EnableReverb)
+            GUILayout.Space(10);
+            GUI_Horizontal(Zone.BEGIN, null, GUILayout.ExpandWidth(false));
+            effectUnity.EnableReverb = GUILayout.Toggle(effectUnity.EnableReverb, "Enable Reverb", GUILayout.Width(155));
+            if (GUILayout.Button("Set Default Value", GUILayout.Width(150)))
+                effectUnity.DefaultReverb();
+            GUI_Horizontal(Zone.END);
+            if (effectUnity.EnableReverb)
             {
-                effect.ReverbDryLevel = GUI_Slider("      Dry Level", effect.ReverbDryLevel, 0, 1, alignCaptionRight: false, valueButton: 0.1f, widthCaption: 120, widthSlider: 200, widthLabelValue: 20);
-                effect.ReverbRoom = GUI_Slider("      Room Size", effect.ReverbRoom, 0, 1, alignCaptionRight: false, valueButton: 0.1f, widthCaption: 120, widthSlider: 200, widthLabelValue: 20);
+                effectUnity.ReverbDryLevel = GUI_Slider("      Dry Level", effectUnity.ReverbDryLevel, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ReverbRoom = GUI_Slider("      Room Size", effectUnity.ReverbRoom, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ReverbDecayTime = GUI_Slider("      Decay Time (s)", effectUnity.ReverbDecayTime, 0.1f, 20, false, true, valueButton: 1f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ReverbLevel = GUI_Slider("      Level", effectUnity.ReverbLevel, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ReverbDelay = GUI_Slider("      Delay (s)", effectUnity.ReverbDelay, 0, 0.1f, false, true, valueButton: 0.001f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ReverbDiffusion = GUI_Slider("      Diffusion", effectUnity.ReverbDiffusion, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ReverbDensity = GUI_Slider("      Density", effectUnity.ReverbDensity, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
             }
-            effect.EnableChorus = GUILayout.Toggle(effect.EnableChorus, "Enable Chorus");
+
+            GUILayout.Space(10);
+            GUI_Horizontal(Zone.BEGIN, null, GUILayout.ExpandWidth(false));
+            effectUnity.EnableChorus = GUILayout.Toggle(effectUnity.EnableChorus, "Enable Chorus", GUILayout.Width(155));
+            if (GUILayout.Button("Set Default Value", GUILayout.Width(150)))
+                effectUnity.DefaultChorus();
+            GUI_Horizontal(Zone.END);
+            if (effectUnity.EnableChorus)
+            {
+                effectUnity.ChorusDryMix = GUI_Slider("      Dry Level", effectUnity.ChorusDryMix, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ChorusDepth = GUI_Slider("      Chorus Depth", effectUnity.ChorusDepth, 0, 1, false, true, valueButton: 0.01f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ChorusRate = GUI_Slider("      Chorus Rate (Hz)", effectUnity.ChorusRate, 0, 20, false, true, valueButton: 0.1f, widthCaption, widthSlider, widthLabelValue);
+                effectUnity.ChorusDelay = GUI_Slider("      Chorus Delay (ms)", effectUnity.ChorusDelay, 0, 100, false, true, valueButton: 1f, widthCaption, widthSlider, widthLabelValue);
+            }
 
             GUI_Vertical(Zone.END);
 
             GUI_Horizontal(Zone.END);
         }
 #else
-        static public void GUI_EffectSoundFont(float indent)
-        {
-            GUI_Horizontal(Zone.BEGIN, myStyle.BacgDemosLight);
-            GUI_Indent(indent);
-            GUI_Vertical(Zone.BEGIN);
-            GUILayout.Label("The effects of the soundfont are part of the design of each instrument. The designer carefully chose them to give the samples the best sound without too much emphasis, but as close as possible to the real sound.", myStyle.TitleLabel3);
-            GUILayout.Label("Available with Maestro MPTK Pro.", myStyle.TitleLabel3);
-            GUI_Vertical(Zone.END);
-            GUI_Horizontal(Zone.END);
-        }
-
         static public void GUI_EffectUnity(float indent)
         {
             GUI_Horizontal(Zone.BEGIN, myStyle.BacgDemosLight);
@@ -453,5 +533,32 @@ namespace DemoMPTK
             return ret;
         }
 
+        static public bool FoldOut(bool open, string title, string url = null)
+        {
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.BEGIN, null, GUILayout.ExpandWidth(false));
+            open = GUILayout.Toggle(open, title, GUILayout.ExpandWidth(false));
+            if (url != null)
+            {
+                GUILayout.Space(20);
+                if (GUILayout.Button("More information", myStyle.LabelLink))
+                    Application.OpenURL(url);
+                var lastRect = GUILayoutUtility.GetLastRect();
+                GUI.Label(lastRect, "_____________", myStyle.LabelLink);
+            }
+            HelperDemo.GUI_Horizontal(HelperDemo.Zone.END);
+            return open;
+        }
+
+        static public Vector3 GUIScale()
+        {
+            // https://forum.unity.com/threads/how-to-scale-my-gui-label-with-the-screensize.448997/
+            // Why 1200 / 720 ? Because I have designed all IMGUI with this initial resolution.
+            Vector3 scale = new Vector3(Screen.width / 1200f, Screen.height / 720f, 1.0f);
+            // Match width
+            scale.y = scale.x;
+            GUI.matrix = Matrix4x4.TRS(new Vector3(0, 0, 0), Quaternion.identity, scale);
+            //Debug.Log($"width:{Screen.width} height:{Screen.height} scale:{scale}");
+            return scale;
+        }
     }
 }

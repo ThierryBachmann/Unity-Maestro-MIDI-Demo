@@ -61,7 +61,7 @@ namespace DemoMPTK
         private bool waitingNoteOff = false;
 
         private MPTKFootPrint libFootPrint;
-        private string MidiFound="";
+        private string MidiFound = "";
 
         void Awake()
         {
@@ -125,6 +125,8 @@ namespace DemoMPTK
         {
             if (!HelperDemo.CheckSFExists()) return;
 
+            Vector3 scale = HelperDemo.GUIScale();
+
             // Set custom Style. Good for background color 3E619800
             if (myStyle == null) myStyle = new CustomStyle();
 
@@ -133,7 +135,7 @@ namespace DemoMPTK
             // Display popup in first to avoid activate other layout behind
             PopPatch.Draw(MidiPlayerGlobal.MPTK_ListPreset, CurrentPatch, myStyle);
 
-            MainMenu.Display("Tiny Sequencer Demonstration", myStyle, "https://paxstellar.fr/class-midifilewriter2/");
+            MainMenu.Display("Tiny Sequencer Demonstration", myStyle, Screen.width / scale.x, "https://paxstellar.fr/class-midifilewriter2/");
 
             GUILayout.BeginVertical(myStyle.BacgDemosLight);
 
@@ -349,7 +351,7 @@ namespace DemoMPTK
             midiStreamPlayer.MPTK_PlayEvent(ks.Note);
 
             // Add midi event "Note On" to the midifilewriter object
-            midiFileWriter.AddNote(1,midiFileWriter.ConvertMilliToTick(CurrentTimeMs), 1, ks.Key, 100, -1);
+            midiFileWriter.AddNote(1, midiFileWriter.ConvertMilliToTick(CurrentTimeMs), 1, ks.Key, 100, -1);
         }
 
 

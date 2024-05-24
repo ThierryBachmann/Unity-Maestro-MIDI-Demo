@@ -67,16 +67,18 @@ namespace MFlight.Demo
 
         public void Quit()
         {
-            for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
-            {
-                Debug.Log(SceneUtility.GetScenePathByBuildIndex(i));
+            // Bug when switching from Channel spatilization.
+            //
+            //for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+            //{
+            //    Debug.Log(SceneUtility.GetScenePathByBuildIndex(i));
 
-                if (SceneUtility.GetScenePathByBuildIndex(i).Contains("ScenesDemonstration"))
-                {
-                    SceneManager.LoadScene(i, LoadSceneMode.Single);
-                    return;
-                }
-            }
+            //    if (SceneUtility.GetScenePathByBuildIndex(i).Contains("ScenesDemonstration"))
+            //    {
+            //        SceneManager.LoadScene(i, LoadSceneMode.Single);
+            //        return;
+            //    }
+            //}
             // Quit if not found
             Application.Quit();
         }

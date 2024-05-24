@@ -25,13 +25,14 @@ namespace DemoMPTK
             Application.Quit();
         }
 
-        static public void Display(string title, CustomStyle myStyle, string helpUrl = null)
+        static public void Display(string title, CustomStyle myStyle, float width, string helpUrl = null)
         {
-            GUILayout.BeginHorizontal(myStyle.BacgDemosMedium);
             if (buttonIconHome == null) buttonIconHome = Resources.Load<Texture2D>("Textures/home");
             if (buttonIconQuit == null) buttonIconQuit = Resources.Load<Texture2D>("Textures/quit");
             if (buttonIconMPTK == null) buttonIconMPTK = Resources.Load<Texture2D>("Logo_MPTK");
             if (buttonIconHelp == null) buttonIconHelp = Resources.Load<Texture2D>("Textures/help-icon");
+
+            GUILayout.BeginHorizontal(myStyle.BacgDemosMedium, GUILayout.Width(width));
 
             if (Application.isMobilePlatform)
                 // Often, corner are rounded ...
@@ -51,14 +52,12 @@ namespace DemoMPTK
                 if (GUILayout.Button(new GUIContent(buttonIconHelp, "Help"), GUILayout.Width(60), GUILayout.Height(60)))
                     Application.OpenURL(helpUrl);
             }
-            GUILayout.BeginVertical(myStyle.BacgDemosMedium);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(title, myStyle.TitleLabel1Centered, GUILayout.Height(35));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("For simplicity’s sake, demonstrations are built using IMGUI. However, for a more accurate playing, it is advisable to design your project with others Unity UI API. Click for comparing.", myStyle.TitleLabel3Centered, GUILayout.Height(40)))
+            GUILayout.BeginVertical(myStyle.BacgDemosMedium/*, GUILayout.Width(width)*/);
+            GUILayout.Label(title, myStyle.TitleLabel1Centered, GUILayout.Height(30));
+            if (GUILayout.Button(
+                "MPTK demos are built using IMGUI. However for a more accurate playing, design your project with others Unity UI API. Click for comparing.", 
+                myStyle.TitleLabel3Centered, /*GUILayout.Width(width-60-60-60-60),*/ GUILayout.Height(25)))
                 Application.OpenURL("https://docs.unity3d.com/2023.3/Documentation/Manual/UI-system-compare.html");
-            GUILayout.EndHorizontal();
             GUILayout.EndVertical();
 
             if (GUILayout.Button(new GUIContent(buttonIconMPTK, "Go to web site"), GUILayout.Width(60), GUILayout.Height(60)))

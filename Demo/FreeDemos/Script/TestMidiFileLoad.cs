@@ -5,6 +5,7 @@ using UnityEngine;
 using System;
 using UnityEngine.Events;
 using MidiPlayerTK;
+using UnityEngine.UIElements;
 
 namespace DemoMPTK
 {
@@ -125,6 +126,8 @@ namespace DemoMPTK
         {
             if (!HelperDemo.CheckSFExists()) return;
 
+            HelperDemo.GUIScale();
+
             // Set custom Style. Good for background color 3E619800
             if (myStyle == null)
                 myStyle = new CustomStyle();
@@ -150,7 +153,7 @@ namespace DemoMPTK
                 // Display popup in first to avoid activate other layout behind
                 PopMidi.Draw(MidiPlayerGlobal.MPTK_ListMidi, MidiIndex, myStyle);
 
-                MainMenu.Display("Test MIDI File Loader - Demonstrate how to use the MPTK API to load a MIDI file", myStyle);
+                MainMenu.Display("Test MIDI File Loader - Demonstrate how to use the MPTK API to load a MIDI file", myStyle, Screen.width);
 
                 //
                 // Left column: MIDI action and info

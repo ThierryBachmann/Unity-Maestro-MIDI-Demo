@@ -1782,6 +1782,41 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 0
+--- !u!114 &440373500
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32623745ea23d0b4a870fb39b6f1b4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  applyReverb: 0
+  reverbRoom: 0.9
+  reverbRoomHF: 0.99
+  reverbRoomLF: 1
+  reverbReflectionLevel: 0.67254543
+  reverbReflectionDelay: 0
+  reverbDryLevel: 1
+  reverbDecayTime: 1.49
+  reverbDecayHFRatio: 0.83
+  reverbLevel: 0.85
+  reverbDelay: 0.011
+  reverbHfReference: 5000
+  reverbLfReference: 250
+  reverbDiffusion: 1
+  reverbDensity: 1
+  applyChorus: 0
+  chorusDryMix: 0.5
+  chorusWetMix1: 0.5
+  chorusWetMix2: 0.5
+  chorusWetMix3: 0.5
+  chorusDelay: 40
+  chorusRate: 0.8
+  chorusDepth: 0.03
 --- !u!1 &492589725
 GameObject:
   m_ObjectHideFlags: 0
@@ -2519,6 +2554,33 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 710001869}
   m_CullTransparentMesh: 0
+--- !u!114 &728705528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef9d47b9b4c0d9e458a1882994412ef9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  FilterFreqOffset: 0
+  ReverbAmplify: 0
+  ChorusAmplify: 0
+  filterQModOffset: 0
+  applySFReverb: 0
+  applySFChorus: 0
+  applySFFilter: 1
+  sfReverbRoomSize: 0.5
+  sfReverbDamp: 0.3
+  sfReverbWidth: 0.8
+  sfReverbLevel: 0.7
+  sfChorusLevel: 0.6
+  sfChorusSpeed: 0.2
+  sfChorusDepth: 4.25
+  sfChorusWidth: 10
 --- !u!1 &761130570
 GameObject:
   m_ObjectHideFlags: 0
@@ -2906,6 +2968,7 @@ MonoBehaviour:
   AudioBufferLenght: 0
   AudioNumBuffers: 0
   AudioEngine: FMOD
+  OutputRate: 0
   playOnlyFirstWave: 0
   playNoteOff: 0
   MPTK_EnablePresetDrum: 0
@@ -2957,6 +3020,7 @@ MonoBehaviour:
   maxDistance: 0
   MPTK_EnablePanChange: 1
   volumeGlobal: 0.5
+  dsp_64: 0
   MPTK_LogEvents: 0
   MPTK_LogWave: 0
   MPTK_StatVoiceCountPlaying: 0
@@ -2978,7 +3042,9 @@ MonoBehaviour:
   VerboseKillByExclusive: 0
   VerboseGenerator: 0
   VerboseCalcGen: 0
-  VerboseCalcADSR: 0
+  VerboseCalcMod: 0
+  VerboseCalcVolADSR: 0
+  VerboseCalcModADSR: 0
   VerboseController: 0
   VerboseEnvVolume: 0
   VerboseEnvModulation: 0
@@ -2997,7 +3063,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   showMidiInfo: 0
-  showSynthParameter: 1
+  showSynthParameter: 0
   showSpatialization: 0
   showUnitySynthParameter: 0
   showUnityPerformanceParameter: 1
@@ -3006,10 +3072,12 @@ MonoBehaviour:
   showMidiParameter: 0
   showSynthEvents: 0
   showEvents: 0
-  showDefault: 1
+  showDefault: 0
   spatialize: 0
-  MPTK_EffectSoundFont: {fileID: 0}
-  MPTK_EffectUnity: {fileID: 0}
+  histoDspSize: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  histoCurrent: 0
+  MPTK_EffectSoundFont: {fileID: 1211176417}
+  MPTK_EffectUnity: {fileID: 1686910556}
   MPTK_ModeSpatializer: 0
   MPTK_MaxSpatialSynth: 0
   MPTK_SpatialSynthEnabled: 0
@@ -3842,6 +3910,7 @@ MonoBehaviour:
   AudioBufferLenght: 0
   AudioNumBuffers: 0
   AudioEngine: FMOD
+  OutputRate: 0
   playOnlyFirstWave: 0
   playNoteOff: 0
   MPTK_EnablePresetDrum: 0
@@ -3893,6 +3962,7 @@ MonoBehaviour:
   maxDistance: 0
   MPTK_EnablePanChange: 1
   volumeGlobal: 0.5
+  dsp_64: 0
   MPTK_LogEvents: 1
   MPTK_LogWave: 0
   MPTK_StatVoiceCountPlaying: 0
@@ -3914,7 +3984,9 @@ MonoBehaviour:
   VerboseKillByExclusive: 0
   VerboseGenerator: 0
   VerboseCalcGen: 0
-  VerboseCalcADSR: 0
+  VerboseCalcMod: 0
+  VerboseCalcVolADSR: 0
+  VerboseCalcModADSR: 0
   VerboseController: 0
   VerboseEnvVolume: 0
   VerboseEnvModulation: 0
@@ -3933,7 +4005,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   showMidiInfo: 0
-  showSynthParameter: 1
+  showSynthParameter: 0
   showSpatialization: 0
   showUnitySynthParameter: 0
   showUnityPerformanceParameter: 0
@@ -3942,10 +4014,12 @@ MonoBehaviour:
   showMidiParameter: 0
   showSynthEvents: 1
   showEvents: 0
-  showDefault: 1
+  showDefault: 0
   spatialize: 0
-  MPTK_EffectSoundFont: {fileID: 0}
-  MPTK_EffectUnity: {fileID: 0}
+  histoDspSize: 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  histoCurrent: 0
+  MPTK_EffectSoundFont: {fileID: 728705528}
+  MPTK_EffectUnity: {fileID: 440373500}
   MPTK_ModeSpatializer: 0
   MPTK_MaxSpatialSynth: 0
   MPTK_SpatialSynthEnabled: 0
@@ -3998,6 +4072,33 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1211176417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef9d47b9b4c0d9e458a1882994412ef9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  FilterFreqOffset: 0
+  ReverbAmplify: 0
+  ChorusAmplify: 0
+  filterQModOffset: 0
+  applySFReverb: 0
+  applySFChorus: 0
+  applySFFilter: 1
+  sfReverbRoomSize: 0.5
+  sfReverbDamp: 0.3
+  sfReverbWidth: 0.8
+  sfReverbLevel: 0.7
+  sfChorusLevel: 0.6
+  sfChorusSpeed: 0.2
+  sfChorusDepth: 4.25
+  sfChorusWidth: 10
 --- !u!1 &1286427269
 GameObject:
   m_ObjectHideFlags: 0
@@ -5418,6 +5519,41 @@ MonoBehaviour:
   m_ChildScaleWidth: 1
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &1686910556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32623745ea23d0b4a870fb39b6f1b4d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  applyReverb: 0
+  reverbRoom: 0.9
+  reverbRoomHF: 0.99
+  reverbRoomLF: 1
+  reverbReflectionLevel: 0.67254543
+  reverbReflectionDelay: 0
+  reverbDryLevel: 1
+  reverbDecayTime: 1.49
+  reverbDecayHFRatio: 0.83
+  reverbLevel: 0.85
+  reverbDelay: 0.011
+  reverbHfReference: 5000
+  reverbLfReference: 250
+  reverbDiffusion: 1
+  reverbDensity: 1
+  applyChorus: 0
+  chorusDryMix: 0.5
+  chorusWetMix1: 0.5
+  chorusWetMix2: 0.5
+  chorusWetMix3: 0.5
+  chorusDelay: 40
+  chorusRate: 0.8
+  chorusDepth: 0.03
 --- !u!1 &1694321007
 GameObject:
   m_ObjectHideFlags: 0
