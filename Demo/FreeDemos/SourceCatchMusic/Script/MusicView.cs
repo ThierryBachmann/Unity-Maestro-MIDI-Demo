@@ -8,16 +8,51 @@ using DemoMPTK;
 
 namespace MPTKDemoCatchMusic
 {
+    /// <summary>
+    /// MAin class for CatchMusic demo/
+    ///     - Start MidiFilePlayer ad defined OnEventNotesMidi to catch each MIDI events (without playing them).
+    ///     - Create Unity GameObject for each MIDI events (only NoteOn and PatchChange for instrument).
+    /// </summary>
     public class MusicView : MonoBehaviour
     {
 
         public static float Speed = 15f;
         public Camera Cam;
+
+        /// <summary>
+        /// A prefab MidiFilePlayer must exists in the Unity Editor Hierarchy and must be associated in the MusicView GameObject inspector.
+        /// In ths demo, the MidiFilePlayer is muted (Send MIDI ti the Synth disabled). 
+        /// It is only used to receive MIDI events thanks to the MIDI sequencer and the event defined with OnEventNotesMidi (see bellow).
+        /// </summary>
         public MidiFilePlayer midiFilePlayer;
+
+        /// <summary>
+        /// A prefab MidiStreamPlayer must exists in the Unity Editor Hierarchy and must be associated in the MusicView GameObject inspector.
+        /// A reference to the MidiStreamPlayer is associated to each NoteView and ControlView GameObject created for each MIDI event.
+        /// When the GameObject reach the end of the area, the MIDI event is played with MidiStreamPlayer.
+        /// </summary>
         public MidiStreamPlayer midiStreamPlayer;
+
         public static Color ButtonColor = new Color(.7f, .9f, .7f, 1f);
+
+        /// <summary>
+        /// Hold a GameObject created for each MIDI note received from the MidiFilePlayer sequencer. Created with Instantiate<NoteView>().
+        /// with:
+        ///     - note associated
+        ///     - MidiStreamPlayer for playing the note by the MIDI synth.
+        ///     - some graphical information and current position
+        /// </summary>
         public NoteView NoteDisplay;
+
+        /// <summary>
+        /// Hold a GameObject created for each MIDI controller received from the MidiFilePlayer sequencer. Created with Instantiate<NoteView>().
+        /// with:
+        ///     - Note associated
+        ///     - MidiStreamPlayer for playing the note by the MIDI synth.
+        ///     - some graphical information and current position
+        /// </summary>
         public ControlView ControlDisplay;
+
         public Collide Collider;
         public GameObject Plane;
         public float minZ, maxZ, minX, maxX;
@@ -27,7 +62,7 @@ namespace MPTKDemoCatchMusic
         public Material MatNewNote;
         public Material MatNewController;
 
-        // Count gameobject for each z position in the plan. Useful to stack them.
+        // Count GameObject for each z position in the plan. Useful to stack them.
         int[] countZ;
 
         public void EndLoadingSF()
@@ -41,8 +76,6 @@ namespace MPTKDemoCatchMusic
 
         void Start()
         {
-            if (!HelperDemo.CheckSFExists()) return;
-
             // Default size of a Unity Plan
             float planSize = 10f;
 
@@ -54,23 +87,23 @@ namespace MPTKDemoCatchMusic
 
             if (midiFilePlayer != null)
             {
-                // No listener defined, set now by script. NotesToPlay will be called for each new notes read from Midi file
-                Debug.Log("MusicView: Maestro Event MidiFilePlayer.OnEventNotesMidi set by script.");
+                // No listener defined. Set now by script. NotesToPlay will be called for each new notes read from Midi file
+                Debug.Log("MusicView: Maestro Event MidiFilePlayer.OnEventNotesMidi set by script (see MusicView.cs). Setting with the inspector is also possible.");
                 midiFilePlayer.OnEventNotesMidi.AddListener(NotesToPlay);
             }
             else
-                Debug.Log("MusicView: no MidiFilePlayer detected");
+                Debug.Log("No MidiFilePlayer prefab detected. Add it to your Hierarchy and defined it in MusicView inspector.");
 
         }
 
         /// <summary>@brief
-        /// Call when a group of midi events is ready to plays from the the midi reader.
-        /// Playing the events are delayed until they "fall out"
+        /// Call when a group of MIDI events is ready for playing from the the midi reader.
+        /// Play events are delayed until they "fall out". See NoteView.cs and MControlView.cs
         /// </summary>
         /// <param name="notes"></param>
         public void NotesToPlay(List<MPTKEvent> notes)
         {
-            // Count gameobject for each z position in the plan. Useful to stack them.
+            // Count GameObject for each z position in the plan. Useful to stack them.
             countZ = new int[Convert.ToInt32(maxZ - minZ) + 1];
 
             //Debug.Log(midiFilePlayer.MPTK_PlayTime.ToString() + " count:" + notes.Count);
@@ -87,12 +120,12 @@ namespace MPTKDemoCatchMusic
                             countZ[Convert.ToInt32(z - minZ)]++;
                             // Y position is set depending the count of object at the z position
                             Vector3 position = new Vector3(maxX, 2 + countZ[Convert.ToInt32(z - minZ)] * 4f, z);
-                            // Instanciate a gamobject to represent this midi event in the 3D world
+                            // Instantiate a GameObject to represent this midi event in the 3D world
                             NoteView noteview = Instantiate<NoteView>(NoteDisplay, position, Quaternion.identity);
                             noteview.gameObject.SetActive(true);
                             noteview.hideFlags = HideFlags.HideInHierarchy;
                             noteview.midiStreamPlayer = midiStreamPlayer;
-                            noteview.note = mptkEvent; // the midi event is attached to the gameobjet, will be played more later
+                            noteview.noteOn = mptkEvent; // the midi event is attached to the gameobjet, will be played more later
                             noteview.gameObject.GetComponent<Renderer>().material = MatNewNote;
                             // See noteview.cs: update() move the note along the plan until they fall out, then they are played
                             noteview.zOriginal = position.z;
@@ -110,12 +143,12 @@ namespace MPTKDemoCatchMusic
                             // Y position is set depending the count of objects at the z position
                             countZ[Convert.ToInt32(z - minZ)]++;
                             Vector3 position = new Vector3(maxX, 8f + countZ[Convert.ToInt32(z - minZ)] * 4f, z);
-                            // Instanciate a gamobject to represent this midi event in the 3D world
+                            // Instantiate a GameObject to represent this midi event in the 3D world
                             ControlView patchview = Instantiate<ControlView>(ControlDisplay, position, Quaternion.identity);
                             patchview.gameObject.SetActive(true);
                             patchview.hideFlags = HideFlags.HideInHierarchy;
                             patchview.midiStreamPlayer = midiStreamPlayer;
-                            patchview.note = mptkEvent; // the midi event is attached to the gameobjet, will be played more later
+                            patchview.instrumentChange = mptkEvent; // the midi event is attached to the gameobjet, will be played more later
                             patchview.gameObject.GetComponent<Renderer>().material = MatNewController;
                             patchview.zOriginal = position.z;
                         }
@@ -126,7 +159,7 @@ namespace MPTKDemoCatchMusic
 
         private void PlaySound()
         {
-            // Some sound for waiting the notes, will be disbled at the fist note played ...
+            // Some sound for waiting the notes, will be disabled at the fist note played ...
             //! [Example PlayNote]
             midiStreamPlayer.MPTK_PlayEvent
             (
@@ -141,13 +174,14 @@ namespace MPTKDemoCatchMusic
             //! [Example PlayNote]
         }
 
+        /// <summary>
+        /// Quick UI
+        /// </summary>
         void OnGUI()
         {
             int startx = 5;
             int starty = 90;
             int maxwidth = Screen.width;
-
-            if (!HelperDemo.CheckSFExists()) return;
 
             if (midiFilePlayer != null)
             {
@@ -208,11 +242,11 @@ namespace MPTKDemoCatchMusic
         }
 
         /// <summary>@brief
-        /// Remove all gameobject Note on the screen
+        /// Remove all GameObject Note on the screen
         /// </summary>
         public void Clear()
         {
-            NoteView[] components = GameObject.FindObjectsOfType<NoteView>();
+            NoteView[] components = GameObject.FindObjectsByType<NoteView>(FindObjectsSortMode.None);
             foreach (NoteView noteview in components)
             {
                 if (noteview.enabled)
@@ -225,7 +259,7 @@ namespace MPTKDemoCatchMusic
         {
             if (midiFilePlayer != null && midiFilePlayer.MPTK_IsPlaying)
             {
-                // Generate random collider
+                // Generates random collisions that unfortunately change the music ... for fun!
                 float time = Time.realtimeSinceStartup - LastTimeCollider;
                 if (time > DelayCollider + FirstDelayCollider)
                 {
@@ -234,7 +268,7 @@ namespace MPTKDemoCatchMusic
 
                     float zone = 10;
                     Vector3 position = new Vector3(UnityEngine.Random.Range(minX + zone, maxX - zone), -5, UnityEngine.Random.Range(minZ + zone, maxZ - zone));
-                    // Instanciate collider (sphere) to interact with note
+                    // Instantiate collider (sphere) to interact with note and patch change.
                     Collide n = Instantiate<Collide>(Collider, position, Quaternion.identity);
                     n.gameObject.SetActive(true);
                     n.hideFlags = HideFlags.HideInHierarchy;

@@ -3,7 +3,7 @@
 //#define CHECK_MODE_EDITOR
 
 //#if CHECK_MODE_EDITOR
-
+ 
 // Was just to learn UI Toolbox and check possibility to share script and UXML between mode Extension Editor and Runtime
 // result: 
 //  It's possible for UI Toolkit, just load UXML "manually" (AssetDatabase.LoadAssetAtPath)
@@ -24,7 +24,7 @@ namespace MidiPlayerTK
         static ScenesDemonstrationEditor window;
         Demonstrator loadedDemos;
 
-        [MenuItem("Maestro/Load Demonstration &D", false, 50)]
+        [MenuItem(Constant.MENU_MAESTRO + "/Load Demonstration &D", false, 50)]
         public static void ShowWindow()
         {
             window = GetWindow<ScenesDemonstrationEditor>(true, "Demonstration Loader - Version: " + Constant.version);
@@ -47,9 +47,11 @@ namespace MidiPlayerTK
             var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>("Assets/MidiPlayer/Demo/Builder/Resources/ScenesDemonstration.uxml");
             // Clone the visual tree into the root.
             var uxml = visualTree.CloneTree();
+
             loadedDemos.Root.Add(uxml);
 
-            // Find VisualComponent 
+            /// Find all visual element and apply content or enable callback.
+            /// Works the same for Editor and Run mode.
             loadedDemos.FindVisualComponent();
 
             // Load the row template

@@ -13,7 +13,7 @@ namespace DemoMVP
     ///     Create this attribute in your class:\n
     ///         public MidiFilePlayer midiFilePlayer;\n
     ///     In the Unity Start()\n
-    ///         midiFilePlayer = FindObjectOfType<MidiFilePlayer>();\n
+    ///         midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();\n
     /// </summary>
     public class TheSimplestMidiLoader : MonoBehaviour
     {

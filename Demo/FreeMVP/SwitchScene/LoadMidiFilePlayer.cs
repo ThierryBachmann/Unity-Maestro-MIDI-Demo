@@ -64,7 +64,7 @@ namespace DemoMVPSwitchScene
                 Debug.Log("Nevertheless, dynamically loading MidiFilePlayer components is also possible.");
 
                 // Find it on the scene
-                midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+                midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
                 if (midiFilePlayer == null)
                 {
                     Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");

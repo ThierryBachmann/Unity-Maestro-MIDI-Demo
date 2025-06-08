@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,9 +20,11 @@ namespace DemoMPTK
         {
             public string Message;
             public LogType Type;
+            public DateTime TimeStamp;
 
             public LogMessage(string msg, LogType type)
             {
+                TimeStamp = DateTime.Now;
                 Message = msg;
                 Type = type;
             }
@@ -65,9 +66,12 @@ namespace DemoMPTK
             {
                 LogMessage message = queue.Dequeue();
                 string[] lines = message.Message.Split(new char[] { '\n' });
-
+                string timeStamp = message.TimeStamp.ToString("HH:mm:ss ")  ;
                 foreach (string l in lines)
-                    CreateText(l);
+                {
+                    CreateText(l, timeStamp);
+                    timeStamp="         "; // only first line has timestamp, others are just log lines
+                }
             }
 
             while (messages.Count > 500)
@@ -89,14 +93,14 @@ namespace DemoMPTK
             }
         }
 
-        private void CreateText(string log)
+        private void CreateText(string log, string timeStamp)
         {
             // no Debug Log here! crash Unity
 
             Text text = Instantiate<Text>(textPrefab);
             text.transform.SetParent(Content.transform);
             text.name = $"Log {index++}";
-            text.text = DateTime.Now.ToString() + " " + log;
+            text.text = timeStamp + log;
             text.transform.position = this.transform.position;
             text.transform.localScale = new Vector3(1, 1, 1);
             text.gameObject.SetActive(true);

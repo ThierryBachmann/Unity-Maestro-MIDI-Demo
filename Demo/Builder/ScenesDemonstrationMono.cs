@@ -22,13 +22,15 @@ namespace MidiPlayerTK
             // Nedd to load "manually" the template uxml
             loadedDemos.RowTemplate = Resources.Load<VisualTreeAsset>("OneRowDemo");
 
-            // Find VisualComponent 
+            /// Find all visual element and apply content or enable callback.
+            /// Works the same for Editor and Run mode.
             loadedDemos.FindVisualComponent();
+
 
             int index = 1;
             foreach (Demonstrator demo in loadedDemos.Demos)
             {
-                // Take only scene defined in builder settings
+                // Take only scene defined in builder settings or the first one (wich must be the scene demo itself)
                 if (index == 1 || SceneUtility.GetBuildIndexByScenePath(demo.SceneName) >= 0)
                     loadedDemos.AddRow(demo, index++, 0);
             }

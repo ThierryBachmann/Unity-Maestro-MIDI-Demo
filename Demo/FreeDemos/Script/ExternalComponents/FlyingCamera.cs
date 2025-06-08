@@ -38,19 +38,28 @@ namespace DemoMPTK
         //micah_3d: added so camera will be able to collide with world objects if users chooses
         public bool isColliding = true;
         //physic material added to keep camera from spinning out of control if it hits a corner or multiple colliders at the same time.  
+#if UNITY_6000_0_OR_NEWER
+        PhysicsMaterial myMaterial;
+#else
         PhysicMaterial myMaterial;
-
+#endif
         void Start()
         {
             if (isColliding == true)
             {
+#if UNITY_6000_0_OR_NEWER
+                myMaterial = new PhysicsMaterial("ZeroFriction");
+                myMaterial.frictionCombine = PhysicsMaterialCombine.Multiply;
+                myMaterial.bounceCombine = PhysicsMaterialCombine.Average;
+#else
                 myMaterial = new PhysicMaterial("ZeroFriction");
+                myMaterial.frictionCombine = PhysicMaterialCombine.Multiply;
+                myMaterial.bounceCombine = PhysicMaterialCombine.Average;
+#endif
                 myMaterial.dynamicFriction = 0f;
                 myMaterial.staticFriction = 0f;
                 myMaterial.bounciness = 0f;
-                myMaterial.frictionCombine = PhysicMaterialCombine.Multiply;
-                myMaterial.bounceCombine = PhysicMaterialCombine.Average
-    ;
+                
                 gameObject.AddComponent<CapsuleCollider>();
                 gameObject.GetComponent<CapsuleCollider>().radius = 1f;
                 gameObject.GetComponent<CapsuleCollider>().height = 1.68f;

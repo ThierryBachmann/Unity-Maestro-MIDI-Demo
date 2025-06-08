@@ -1,5 +1,4 @@
-﻿#define MPTK_PRO
-using MidiPlayerTK;
+﻿using MidiPlayerTK;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -48,7 +47,7 @@ namespace DemoMVP
             // Find existing MidiFilePlayer in the scene hierarchy
             // ---------------------------------------------------
 
-            midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiFilePlayer == null)
             {
                 Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the Maestro menu.");

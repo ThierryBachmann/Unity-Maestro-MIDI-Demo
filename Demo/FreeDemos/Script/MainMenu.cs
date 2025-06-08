@@ -22,7 +22,25 @@ namespace DemoMPTK
 
         public void Quit()
         {
-            Application.Quit();
+            if (!Application.isEditor)
+            {
+                MidiPlayerGlobal.MPTK_Stop();
+                Application.Quit();
+                //for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+                //{
+                //    Debug.Log(SceneUtility.GetScenePathByBuildIndex(i));
+
+                //    if (SceneUtility.GetScenePathByBuildIndex(i).Contains("ScenesDemonstration"))
+                //    {
+                //        SceneManager.LoadScene(i, LoadSceneMode.Single);
+                //        return;
+                //    }
+                //}
+            }
+#if UNITY_EDITOR
+            else
+                UnityEditor.EditorApplication.isPlaying = false;
+#endif
         }
 
         static public void Display(string title, CustomStyle myStyle, float width, string helpUrl = null)
@@ -55,7 +73,7 @@ namespace DemoMPTK
             GUILayout.BeginVertical(myStyle.BacgDemosMedium/*, GUILayout.Width(width)*/);
             GUILayout.Label(title, myStyle.TitleLabel1Centered, GUILayout.Height(30));
             if (GUILayout.Button(
-                "MPTK demos are built using IMGUI. However for a more accurate playing, design your project with others Unity UI API. Click for comparing.", 
+                "MPTK demos are built using IMGUI. However for a more accurate playing, design your project with others Unity UI API. Click for comparing.",
                 myStyle.TitleLabel3Centered, /*GUILayout.Width(width-60-60-60-60),*/ GUILayout.Height(25)))
                 Application.OpenURL("https://docs.unity3d.com/2023.3/Documentation/Manual/UI-system-compare.html");
             GUILayout.EndVertical();

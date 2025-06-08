@@ -11,6 +11,18 @@ namespace DemoMVP
     ///    Create a GameObject or reuse an existing one\n
     ///    add this script to the GameObject\n
     ///    and run!
+    ///    
+    /// Documentation References:
+    /// - MIDI File Player: https://paxstellar.fr/midi-file-player-detailed-view-2/
+    /// - MPTKEvent: https://mptkapi.paxstellar.com/d9/d50/class_midi_player_t_k_1_1_m_p_t_k_event.html
+    /// 
+    /// A Minimum Viable Product (MVP) that focuses on the essentials of the Maestro API functionality. 
+    /// This script demonstrates only a few basic functions to help users get started with the API.
+    /// - Error handling is minimal, the user interface is basic, and manipulations in Unity are minimized.
+    /// - Prefabs like `MidiFilePlayer` and `MidiStreamPlayer` are essential components of Maestro. 
+    ///   While this demo creates these prefabs via script, it is recommended to add them in the Unity editor 
+    ///   for real projects to take full advantage of the Inspector's parameters.
+    ///    
     /// </summary>
     public class TheSimplestMidiPlayer : MonoBehaviour
     {
@@ -30,6 +42,7 @@ namespace DemoMVP
             midiFilePlayer = gameObject.AddComponent<MidiFilePlayer>();
             midiFilePlayer.MPTK_CorePlayer = true;
             midiFilePlayer.MPTK_DirectSendToPlayer = true;
+            midiFilePlayer.MPTK_EnableChangeTempo = true;
         }
 
         public void Start()

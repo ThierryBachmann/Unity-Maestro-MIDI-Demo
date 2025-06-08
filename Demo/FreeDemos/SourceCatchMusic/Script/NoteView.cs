@@ -8,40 +8,42 @@ using UnityEngine;
 /// </summary>
 namespace MPTKDemoCatchMusic
 {
-    
-    /// <summary>@brief
-    /// Defined behavior of a note
+
+    /// <summary>
+    /// Describe a Unity GameObject dedicated to MIDI note.
+    ///     - created when a MIDI event is read from the MidiFilePlayer (see MusicView.cs), 
+    ///     - moves along the X-axis,
+    ///     - plays the MIDI event when reach the end of the area, 
+    ///     - then destroy.
     /// </summary>
     public class NoteView : MonoBehaviour
     {
         public static bool FirstNotePlayed = false;
-        public MPTKEvent note;
+        public MPTKEvent noteOn;
         public MidiStreamPlayer midiStreamPlayer;
         public bool played = false;
         public Material MatPlayed;
         public float zOriginal;
-        // 
-        /// <summary>@brief
-        /// Update
-        /// @code
-        /// midiFilePlayer.MPTK_PlayNote(note);
-        /// FirstNotePlayed = true;
-        /// @endcode
-        /// </summary>
+
         public void Update()
         {
             // The midi event is played with a MidiStreamPlayer when position X < -45 (falling)
             if (!played && transform.position.x < -45f)
             {
                 played = true;
-                // If original z is not the same, the value will be changed, too bad for the ears ...
+
+                // Random instrument change when the original position is modified by a collider.
+                // If original z is not the same, the note value will be changed.
+                // Not good for the ears ... but funny.
                 int delta = (int)(zOriginal - transform.position.z);
                 //Debug.Log($"Note:{note.Value} Z:{transform.position.z:F1} DeltaZ:{delta} Travel Time:{note.LatenceTimeMillis} ms");
+
                 //! [Example PlayNote]
-                note.Value += delta; // change the original note
+                noteOn.Value += delta; // change the original note
                 // Now play the note with a MidiStreamPlayer prefab
-                midiStreamPlayer.MPTK_PlayEvent(note);
+                midiStreamPlayer.MPTK_PlayEvent(noteOn);
                 //! [Example PlayNote]
+
                 FirstNotePlayed = true;
 
                 gameObject.GetComponent<Renderer>().material = MatPlayed;// .color = Color.red;

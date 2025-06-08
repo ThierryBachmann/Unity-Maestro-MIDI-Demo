@@ -98,7 +98,7 @@ namespace DemoMPTK
             midiFileWriter = new MPTKWriter();
 
             // Need MidiStreamPlayer to play note in real time
-            midiStreamPlayer = FindObjectOfType<MidiStreamPlayer>();
+            midiStreamPlayer = FindFirstObjectByType<MidiStreamPlayer>();
             if (midiStreamPlayer == null)
                 Debug.LogWarning("Can't find a MidiStreamPlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
             else
@@ -123,8 +123,6 @@ namespace DemoMPTK
 
         void OnGUI()
         {
-            if (!HelperDemo.CheckSFExists()) return;
-
             Vector3 scale = HelperDemo.GUIScale();
 
             // Set custom Style. Good for background color 3E619800
@@ -413,7 +411,7 @@ namespace DemoMPTK
         private static void PlayDirectlyMidiSequence(string name, MPTKWriter mfw)
         {
             // Play midi with the MidiExternalPlay prefab without saving midi in a file
-            MidiFilePlayer midiPlayer = FindObjectOfType<MidiFilePlayer>();
+            MidiFilePlayer midiPlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiPlayer == null)
             {
                 Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
@@ -442,35 +440,37 @@ namespace DemoMPTK
             Debug.Log("Write MIDI file:" + filename);
 
             // Wite the midi file
-            mfw.WriteToFile(filename);
-
-            // Need an external player to play midi from a file from a folder
-            MidiExternalPlayer midiExternalPlayer = FindObjectOfType<MidiExternalPlayer>();
-            if (midiExternalPlayer == null)
+            if (mfw.WriteToFile(filename))
             {
-                Debug.LogWarning("Can't find a MidiExternalPlayer Prefab in the current Scene Hierarchy. Add it with the Maestro menu.");
-                return;
+
+                // Need an external player to play midi from a file from a folder
+                MidiExternalPlayer midiExternalPlayer = FindFirstObjectByType<MidiExternalPlayer>();
+                if (midiExternalPlayer == null)
+                {
+                    Debug.LogWarning("Can't find a MidiExternalPlayer Prefab in the current Scene Hierarchy. Add it with the Maestro menu.");
+                    return;
+                }
+                midiExternalPlayer.MPTK_Stop();
+                midiExternalPlayer.MPTK_MidiName = "file://" + filename;
+
+                // Set optional event handler
+                midiExternalPlayer.OnEventStartPlayMidi.RemoveAllListeners();
+                midiExternalPlayer.OnEventStartPlayMidi.AddListener((string midiname) => { Debug.Log($"Start playing {midiname}"); });
+
+                // Set optional event handler
+                midiExternalPlayer.OnEventEndPlayMidi.RemoveAllListeners();
+                midiExternalPlayer.OnEventEndPlayMidi.AddListener((string midiname, EventEndMidiEnum reason) => { Debug.Log($"End playing {midiname} {reason}"); });
+
+                // Play the external file created above
+                midiExternalPlayer.MPTK_Play();
             }
-            midiExternalPlayer.MPTK_Stop();
-            midiExternalPlayer.MPTK_MidiName = "file://" + filename;
-
-            // Set optional event handler
-            midiExternalPlayer.OnEventStartPlayMidi.RemoveAllListeners();
-            midiExternalPlayer.OnEventStartPlayMidi.AddListener((string midiname) => { Debug.Log($"Start playing {midiname}"); });
-
-            // Set optional event handler
-            midiExternalPlayer.OnEventEndPlayMidi.RemoveAllListeners();
-            midiExternalPlayer.OnEventEndPlayMidi.AddListener((string midiname, EventEndMidiEnum reason) => { Debug.Log($"End playing {midiname} {reason}"); });
-
-            // Play the external file created above
-            midiExternalPlayer.MPTK_Play();
         }
 
         private static void StopAllPlaying()
         {
-            MidiExternalPlayer midiExternalPlayer = FindObjectOfType<MidiExternalPlayer>();
+            MidiExternalPlayer midiExternalPlayer = FindFirstObjectByType<MidiExternalPlayer>();
             if (midiExternalPlayer != null) midiExternalPlayer.MPTK_Stop();
-            MidiFilePlayer midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            MidiFilePlayer midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiFilePlayer != null) midiFilePlayer.MPTK_Stop();
         }
         private void Update()

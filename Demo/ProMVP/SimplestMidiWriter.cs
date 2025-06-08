@@ -1,100 +1,102 @@
-using MidiPlayerTK;                                 // uses MIDI Pro Toolkit
+using MidiPlayerTK;
 using System.IO;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace DemoMVP
 {
     /// <summary>
-    /// Read and Write to a MIDI file
+    /// Demonstrates creating, saving, and playing a MIDI file using the Maestro API.
     /// 
-    /// This is intended to be the "Hello, World!" equivalent of the MIDI Pro Toolkit
-    /// (MPTK).
+    /// Features:
+    /// - Dynamically generates a simple MIDI file containing a few notes.
+    /// - Saves the MIDI file to a temporary location.
+    /// - Plays the generated MIDI file using the `MidiExternalPlayer` prefab.
     /// 
+    /// Documentation References:
+    /// - MIDI Writer: https://paxstellar.fr/class-midifilewriter2/
+    /// - MIDI External Player: https://paxstellar.fr/midi-external-player-v2/
+    /// - MPTKEvent: https://mptkapi.paxstellar.com/d9/d50/class_midi_player_t_k_1_1_m_p_t_k_event.html
+    /// 
+    /// This example is designed to be the "Hello, World!" equivalent for the MIDI Pro Toolkit (MPTK).
     /// </summary>
     public class SimplestMidiWriter : MonoBehaviour
     {
-        public string PathMidiSource;
-
-        public Button BtLoadMidi;
-
-        // This class is able to read, write MIDI file
-        public MPTKWriter mfw;
-
-        // Start is called before the first frame update
-        void Start()
+        private void Start()
         {
+            // Generate a temporary file name for the MIDI file
+            string pathMidiSource = Path.GetTempFileName() + ".mid";
 
-            // Button click action
-            BtLoadMidi.onClick.AddListener(() =>
-            {
-                mfw = new MPTKWriter();
-                // Load the MIDI file from OS system file 
-                if (mfw.LoadFromFile(PathMidiSource))
-                {
-                    const int TRACK1 = 1;
-                    const int CHANNEL0 = 0;
-                    long currentTime = 0;
+            // Initialize the MIDI writer class, which handles reading, writing, and playing MIDI files
+            MPTKWriter mptkWriter = new MPTKWriter();
 
-                    // Display each MIDI event (format NAudio)
-                    Debug.Log("<b--- Content after loading ---</b>");
-                    mfw.LogWriter();
+            // Track and channel constants
+            const int TRACK1 = 1, CHANNEL0 = 0;
 
-                    // How many ticks for a quarter ?
-                    int ticksPerQuarterNote = mfw.DeltaTicksPerQuarterNote;
-                    // Search last events
-                    MPTKEvent lastMidiEvent = mfw.MPTK_LastEvent;
-                    Debug.Log($"lastMidiEvent at:{lastMidiEvent.Tick} code:{lastMidiEvent.Command}");
+            // Number of ticks per quarter note
+            int ticksPerQuarterNote = 500;
 
-                    // Time of last event
-                    currentTime = lastMidiEvent.Tick;
+            // Starting time for MIDI events (in ticks)
+            long currentTime = 0;
 
-                    // Next notes will be played a quarter after the last with a duration of a quarter
-                    currentTime += ticksPerQuarterNote;
+            // Set the instrument preset (e.g., a music patch) on the specified channel
+            mptkWriter.AddChangePreset(TRACK1, currentTime, CHANNEL0, 10);
 
-                    // Play a D5 (see class HelperNoteLabel)
-                    mfw.AddNote(TRACK1, currentTime, CHANNEL0, 62, 50, ticksPerQuarterNote);
+            // Add MIDI notes with timing
+            // Each note is added at a specific time, with a duration and velocity (loudness)
 
-                    // Play a E5 one quarter after
-                    currentTime += ticksPerQuarterNote;
-                    mfw.AddNote(TRACK1, currentTime, CHANNEL0, 64, 50, ticksPerQuarterNote);
+            // Play a D4 note
+            currentTime += ticksPerQuarterNote;
+            mptkWriter.AddNote(TRACK1, currentTime, CHANNEL0, 62, 50, ticksPerQuarterNote);
 
-                    // Play a G5 one quarter after
-                    currentTime += ticksPerQuarterNote;
-                    mfw.AddNote(TRACK1, currentTime, CHANNEL0, 67, 50, ticksPerQuarterNote);
+            // Play an E4 note one quarter note later
+            currentTime += ticksPerQuarterNote;
+            mptkWriter.AddNote(TRACK1, currentTime, CHANNEL0, 64, 50, ticksPerQuarterNote);
 
-                    // Silent note : velocity=0 (will generate only a noteoff)
-                    currentTime += ticksPerQuarterNote * 2;
-                    mfw.AddNote(TRACK1, currentTime, CHANNEL0, 80, 0, ticksPerQuarterNote);
+            // Play a G4 note one quarter note later
+            currentTime += ticksPerQuarterNote;
+            mptkWriter.AddNote(TRACK1, currentTime, CHANNEL0, 67, 50, ticksPerQuarterNote);
 
-                    // Display each MIDI event (format NAudio)
-                    Debug.Log("<b>--- Content after modification ---</b>");
-                    mfw.LogWriter();
+            // Add a silent note (velocity = 0) two quarter notes later
+            // This generates only a "Note Off" event
+            currentTime += ticksPerQuarterNote * 2;
+            mptkWriter.AddNote(TRACK1, currentTime, CHANNEL0, 80, 0, ticksPerQuarterNote);
 
+            // Log all MIDI events for debugging purposes
+            mptkWriter.LogWriter();
 
-                    // Write the MIDI with changed name
-                    string filename = Path.Combine(
-                        Path.GetDirectoryName(PathMidiSource),
-                        Path.GetFileNameWithoutExtension(PathMidiSource) + "_rewrited.mid");
-                    mfw.WriteToFile(filename);
+            // Write the MIDI file to the specified path
+            mptkWriter.WriteToFile(pathMidiSource);
+            Debug.Log($"MIDI file created at {pathMidiSource}");
 
-                }
-                else
-                    Debug.LogWarning($"Error loading MIDI file {PathMidiSource}");
-
-            });
+            // Play the generated MIDI file
+            PlayMidiFromFile(pathMidiSource, mptkWriter);
         }
 
-        // Update is called once per frame
-        void Update()
+        private void PlayMidiFromFile(string filePath, MPTKWriter midiWriter)
         {
-            if (Input.GetKeyDown(KeyCode.Space))
+            // Find the MidiExternalPlayer prefab in the scene
+            MidiExternalPlayer midiPlayer = FindFirstObjectByType<MidiExternalPlayer>();
+            if (midiPlayer == null)
             {
+                Debug.LogWarning("No MidiExternalPlayer Prefab found in the current Scene Hierarchy. Add it via the Maestro menu.");
+                return;
+            }
 
-            }
-            else if (Input.GetKeyUp(KeyCode.Space))
-            {
-            }
+            // Configure the MIDI player with the generated MIDI file
+            midiPlayer.MPTK_MidiName = "file://" + filePath; // Use the file URI format
+            midiPlayer.MPTK_MidiAutoRestart = true;
+
+            // Prepare the MIDI file for playback
+            midiWriter.MidiName = filePath;
+
+            // Sort events by absolute time to ensure correct playback order
+            midiWriter.StableSortEvents();
+
+            // Calculate timing details for all MIDI events (e.g., time in measures and quarters)
+            midiWriter.CalculateTiming(logPerf: true);
+
+            // Start playback using the prepared MIDI file
+            midiPlayer.MPTK_Play(mfw2: midiWriter);
         }
     }
 }

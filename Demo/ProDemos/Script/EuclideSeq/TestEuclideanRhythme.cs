@@ -50,8 +50,10 @@ namespace MPTKDemoEuclidean
         public PanelController templateController;
 
         public Button BtPrevious;
-        public Button BtMidi;
         public Button BtNext;
+        public Button BtMidi;
+        public Button BtPriority;
+        public Button BtDelayMidi;
         public MidiStreamPlayer midiStreamPlayer;
         public MidiFilePlayer midiFilePlayer;
 
@@ -89,8 +91,8 @@ namespace MPTKDemoEuclidean
         private List<PanelController> Controllers;
         static List<string> Drums;
 
-        private System.Diagnostics.Stopwatch watchOnAudioFilterRead = new System.Diagnostics.Stopwatch();
-        Thread midiThread;
+        private System.Diagnostics.Stopwatch watchThreadPlayHits = new System.Diagnostics.Stopwatch();
+        Thread threadPlayHits;
         bool threadMode = true;
 
         void Start()
@@ -100,12 +102,12 @@ namespace MPTKDemoEuclidean
             TxtInfo.text = "";
 
             // Need MidiStreamPlayer to play note in real time
-            midiStreamPlayer = FindObjectOfType<MidiStreamPlayer>();
+            midiStreamPlayer = FindFirstObjectByType<MidiStreamPlayer>();
             if (midiStreamPlayer == null)
                 Debug.LogWarning("Can't find a MidiStreamPlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
 
             // Need MidiStreamPlayer to play note in real time
-            midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiFilePlayer == null)
                 Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
 
@@ -205,6 +207,12 @@ namespace MPTKDemoEuclidean
                 SetLabelBtMidi();
             });
 
+            BtNext.onClick.AddListener(() =>
+            {
+                midiFilePlayer.MPTK_Next();
+                SetLabelBtMidi();
+            });
+
             BtMidi.onClick.AddListener(() =>
             {
                 if (!midiFilePlayer.MPTK_IsPlaying)
@@ -214,9 +222,25 @@ namespace MPTKDemoEuclidean
                 SetLabelBtMidi();
             });
 
-            BtNext.onClick.AddListener(() =>
+            BtPriority.onClick.AddListener(() =>
             {
-                midiFilePlayer.MPTK_Next();
+                if (midiFilePlayer.MPTK_IsPlaying)
+                    Debug.Log("Stop MIDI playing before changing priority");
+
+                if (midiFilePlayer.MPTK_ThreadMidiPriority >= 2)
+                    midiFilePlayer.MPTK_ThreadMidiPriority = 0;
+                else
+                    midiFilePlayer.MPTK_ThreadMidiPriority++;
+
+                SetLabelBtMidi();
+            });
+
+            BtDelayMidi.onClick.AddListener(() =>
+            {
+                if (midiFilePlayer.MPTK_ThreadMidiWait > 30)
+                    midiFilePlayer.MPTK_ThreadMidiWait = 0;
+                else
+                    midiFilePlayer.MPTK_ThreadMidiWait += 5;
                 SetLabelBtMidi();
             });
 
@@ -240,9 +264,12 @@ namespace MPTKDemoEuclidean
                 }
             });
             ComboSelectBank.value = 0;
-
+            SetLabelBtMidi();
             Play();
             Application.wantsToQuit += Application_wantsToQuit;
+
+            Debug.Log("Add a track 'Euclidean Drums' to experiment this interesting way for drums.");
+            Debug.Log("Then click on play, modify step and fill for different syle.");
         }
 
         private bool Application_wantsToQuit()
@@ -258,7 +285,10 @@ namespace MPTKDemoEuclidean
 
         void SetLabelBtMidi()
         {
-            BtMidi.GetComponentInChildren<Text>().text = midiFilePlayer.MPTK_IsPlaying ? "Playing " + midiFilePlayer.MPTK_MidiName : "Play Midi";
+            BtMidi.GetComponentInChildren<Text>().text = midiFilePlayer.MPTK_IsPlaying ? "Playing " + midiFilePlayer.MPTK_MidiName : "No Midi Playing";
+            BtPriority.GetComponentInChildren<Text>().text = $"P{midiFilePlayer.MPTK_ThreadMidiPriority}";
+            BtDelayMidi.GetComponentInChildren<Text>().text = $"D{midiFilePlayer.MPTK_ThreadMidiWait}";
+            Debug.Log($"Midi Player: '{(midiFilePlayer.MPTK_IsPlaying ? "Playing " + midiFilePlayer.MPTK_MidiName : "No Midi Playing")}'  MIDI Thread Priority:{midiFilePlayer.MPTK_ThreadMidiPriority}  MIDI Thread Wait:{midiFilePlayer.MPTK_ThreadMidiWait} milliseconds");
         }
 
         /// <summary>@brief
@@ -396,10 +426,10 @@ namespace MPTKDemoEuclidean
             timeSinceLastBeat = 999999d; // start with a first beat
             CurrentBeat = -1; // start with a first beat
 
-            if (threadMode && midiThread == null)
+            if (threadMode && threadPlayHits == null)
             {
                 //Debug.Log($"thread start");
-                midiThread = new Thread(ThreadPlayHits);
+                threadPlayHits = new Thread(ThreadPlayHits);
             }
 
             //Debug.Log($"{IsPlaying}");
@@ -408,9 +438,9 @@ namespace MPTKDemoEuclidean
             {
                 if (threadMode)
                 {
-                    watchOnAudioFilterRead.Reset();
-                    watchOnAudioFilterRead.Start();
-                    midiThread.Start();
+                    watchThreadPlayHits.Reset();
+                    watchThreadPlayHits.Start();
+                    threadPlayHits.Start();
                 }
                 else
                     midiStreamPlayer.OnAudioFrameStart += SynthPlayHits;
@@ -419,7 +449,7 @@ namespace MPTKDemoEuclidean
             {
                 if (threadMode)
                 {
-                    watchOnAudioFilterRead.Stop();
+                    watchThreadPlayHits.Stop();
                     //midiThread.Stop();
                 }
                 else
@@ -428,7 +458,7 @@ namespace MPTKDemoEuclidean
         }
 
         /// <summary>@brief
-        /// This function will be called at each audio frame.
+        /// When threadMode=false, this function is called at each audio frame (midiStreamPlayer.OnAudioFrameStart += SynthPlayHits)
         /// The frequency depends on the buffer size and the synth rate (see inspector of the MidiStreamPlayer prefab)
         /// Recommended values: Freq=48000 Buffer Size=1024 --> call every 11 ms with a high accuracy.
         /// You can't call Unity API in this function (only Debug.Log) but the most part of MPTK API are available.
@@ -462,7 +492,7 @@ namespace MPTKDemoEuclidean
             // Is it time to play a hit ?
             if (IsPlaying && timeSinceLastBeat >= CurrentTempo)
             {
-                //Debug.Log($"{synthMidiMS:F0} {midiStream.StatDeltaAudioFilterReadMS:F2} {deltaTime:F2} {timeSinceLastBeat:F2}");
+                //Debug.Log($"{synthMidiMS:F0} {midiStream.DeltaTimeAudioCall:F2} {deltaTime:F2} {timeSinceLastBeat:F2}");
                 timeSinceLastBeat = 0d;
 
                 // could overflow after 273 days (frequency 11 ms) ;-))) 
@@ -481,18 +511,15 @@ namespace MPTKDemoEuclidean
         }
 
         /// <summary>@brief
-        /// This function will be called at each audio frame.
-        /// The frequency depends on the buffer size and the synth rate (see inspector of the MidiStreamPlayer prefab)
-        /// Recommended values: Freq=48000 Buffer Size=1024 --> call every 11 ms with a high accuracy.
-        /// You can't call Unity API in this function (only Debug.Log) but the most part of MPTK API are available.
-        /// For example : MPTK_PlayDirectEvent or MPTK_PlayEvent to play music note from MPTKEvent (see PlayEuclideanRhythme)
+        /// When threadMode=true, this function is called from a thread (threadPlayHits = new Thread(ThreadPlayHits))
+        /// So, it's an infinite loop able to calculate if a drum hit must be played.
         /// </summary>
         /// <param name="synthTimeMS"></param>
         private void ThreadPlayHits()
         {
             while (IsPlaying)
             {
-                double timeMS = ((double)watchOnAudioFilterRead.ElapsedTicks) / ((double)System.Diagnostics.Stopwatch.Frequency / 1000d);
+                double timeMS = ((double)watchThreadPlayHits.ElapsedTicks) / ((double)System.Diagnostics.Stopwatch.Frequency / 1000d);
                 //Debug.Log($"{timeMS:F0}");
 
                 if (lastSynthTime <= 0d)
@@ -519,7 +546,7 @@ namespace MPTKDemoEuclidean
                 // Is it time to play a hit ?
                 if (IsPlaying && timeSinceLastBeat >= CurrentTempo)
                 {
-                    //Debug.Log($"{synthMidiMS:F0} {midiStream.StatDeltaAudioFilterReadMS:F2} {deltaTime:F2} {timeSinceLastBeat:F2}");
+                    //Debug.Log($"{synthMidiMS:F0} {midiStream.DeltaTimeAudioCall:F2} {deltaTime:F2} {timeSinceLastBeat:F2}");
                     timeSinceLastBeat = 0d;
 
                     // could overflow after 273 days (frequency 11 ms) ;-))) 
@@ -566,14 +593,14 @@ namespace MPTKDemoEuclidean
                         break;
                     case 2:
                         // Stat synth
-                        TxtInfo.text = $"Synth {midiStreamPlayer.IdSynth} DSP: {midiStreamPlayer.StatDspLoadAVG:F1} %\nDelta Frame: {midiStreamPlayer.StatDeltaAudioFilterReadMS:F2} ms\nRate: {AudioSettings.outputSampleRate} Hz Buffer: {midiStreamPlayer.AudioBufferLenght}";
+                        TxtInfo.text = $"Synth {midiStreamPlayer.IdSynth} DSP: {midiStreamPlayer.StatDspLoadAVG:F1} %\nDelta Frame: {midiStreamPlayer.DeltaTimeAudioCall:F2} ms\nRate: {AudioSettings.outputSampleRate} Hz Buffer: {midiStreamPlayer.AudioBufferLenght}";
                         break;
                 }
 
                 /*
                  * TxtInfo.text = $"T:{Controllers.Count} DSP:{midiStream.StatDspLoadAVG:F1} % Speed:{CurrentTempo:F1} ms"
                 + $"\nLast:{midiStream.StatSynthLatencyLAST:F2} ms  Avg:{midiStream.StatSynthLatencyAVG:F2} ms"
-                + $"\nVoice:{midiStream.MPTK_StatVoiceCountActive} Delta:{midiStream.StatDeltaAudioFilterReadMS:F2} ";
+                + $"\nVoice:{midiStream.MPTK_StatVoiceCountActive} Delta:{midiStream.DeltaTimeAudioCall:F2} ";
                  + $"\nUI:{midiStream.StatUILatencyLAST:F2} ms";
                  */
 

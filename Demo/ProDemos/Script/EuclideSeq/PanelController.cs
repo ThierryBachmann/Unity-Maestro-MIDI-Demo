@@ -455,16 +455,25 @@ namespace MPTKDemoEuclidean
         public void RefreshPanelView()
         {
             //Debug.Log("Panel Controller " + Parent.name + " " + ((RectTransform)Parent).CountCornersVisibleFrom(Camera.current));// Camera.main));
-            if (IsReady && ((RectTransform)Parent).CountCornersVisibleFrom(Camera.current) > 0 && PanelView.activeInHierarchy)
+            if (IsReady /*&& ((RectTransform)Parent).CountCornersVisibleFrom(Camera.current) > 0 */&& PanelView.activeInHierarchy)
             {
                 if (HitsStep == null)
                     // Not yet initialized
                     return;
 
+                Transform viewport = this.transform.parent.parent;
+                Rect viewportRect = ((RectTransform)viewport).GetScreenRect(Camera.main);
+                //Debug.Log($"viewport {viewport.name}  viewportRect:{viewportRect}");
+
+                // screen coordinate: from left bottom.
+                Vector3 screenPos_viewport = Camera.main.WorldToScreenPoint(viewport.position);
+                //Debug.Log($"         {viewport.name}  y:{screenPos_viewport.y} y:{screenPos_viewport} ");
+
                 // Useful to hide 3D object as hit (Sphere) and arrow. The scrolview position is left bottom (0,0),
-                // so we are testing only the Y position of the 3D object in the screen.
+                // 
                 Vector3 hitScreenPosition = Camera.main.WorldToScreenPoint(Arrow.transform.position);
-                if (hitScreenPosition.y >= 0f & hitScreenPosition.y <= TestEuclideanRhythme.ScrollviewScreenHeight)
+                //if (hitScreenPosition.y >= 0f & hitScreenPosition.y <= TestEuclideanRhythme.ScrollviewScreenHeight)
+                if (hitScreenPosition.y <= screenPos_viewport.y && hitScreenPosition.y >= viewportRect.y/*& hitScreenPosition.y <= TestEuclideanRhythme.ScrollviewScreenHeight*/)
                 {
                     Arrow.gameObject.SetActive(true);
 
@@ -487,9 +496,10 @@ namespace MPTKDemoEuclidean
                         hitScreenPosition = Camera.main.WorldToScreenPoint(hit.transform.position);
                         // Useful to hide 3D object as hit (Sphere) and arrow. The scrolview position is left bottom (0,0),
                         // so we are testing only the Y position of the 3D object in the screen.
-                        if (hitScreenPosition.y < 0f || hitScreenPosition.y > TestEuclideanRhythme.ScrollviewScreenHeight)
-                            hit.gameObject.SetActive(false);
-                        else
+                        //if (i == 0) // only the first sphere
+                        //    Debug.Log($"{this.name} hit.y:{hit.transform.position.y} hitScreenPosition:{hitScreenPosition.y} ScrollviewScreenHeight:{TestEuclideanRhythme.ScrollviewScreenHeight}");
+                        //if (hitScreenPosition.y < 0f || hitScreenPosition.y > TestEuclideanRhythme.ScrollviewScreenHeight)
+                        if (hitScreenPosition.y <= screenPos_viewport.y && hitScreenPosition.y >= viewportRect.y)
                         {
                             hit.gameObject.SetActive(true);
                             Renderer materialHit = hit.gameObject.GetComponent<Renderer>();
@@ -516,6 +526,8 @@ namespace MPTKDemoEuclidean
                             // Apply scale transformation
                             hit.transform.localScale = new Vector3(sizeHit, sizeHit, sizeHit);
                         }
+                        else
+                            hit.gameObject.SetActive(false);
                     }
                 }
             }
@@ -558,7 +570,7 @@ namespace MPTKDemoEuclidean
         {
             // Take time as soon as event has been detected
             mptkEvent.Tag = DateTime.UtcNow.Ticks;
-            
+
             // Apply effects on new NoteOn
             if (GenTypeH > 0) mptkEvent.ModifySynthParameter(GenTypeH, EffectH, MPTKModeGeneratorChange.Override);
             if (GenTypeV > 0) mptkEvent.ModifySynthParameter(GenTypeV, EffectV, MPTKModeGeneratorChange.Override);

@@ -34,9 +34,9 @@ namespace MFlight.Demo
         [Tooltip("Angle at which airplane banks fully into target.")] public float aggressiveTurnAngle = 10f;
 
         [Header("Input")]
-        [SerializeField] [Range(-1f, 1f)] private float pitch = 0f;
-        [SerializeField] [Range(-1f, 1f)] private float yaw = 0f;
-        [SerializeField] [Range(-1f, 1f)] private float roll = 0f;
+        [SerializeField][Range(-1f, 1f)] private float pitch = 0f;
+        [SerializeField][Range(-1f, 1f)] private float yaw = 0f;
+        [SerializeField][Range(-1f, 1f)] private float roll = 0f;
 
         public float Pitch { set { pitch = Mathf.Clamp(value, -1f, 1f); } get { return pitch; } }
         public float Yaw { set { yaw = Mathf.Clamp(value, -1f, 1f); } get { return yaw; } }
@@ -65,23 +65,21 @@ namespace MFlight.Demo
             //transform.eulerAngles = new Vector3(0, 0, 0);
         }
 
-        public void Quit()
-        {
-            // Bug when switching from Channel spatilization.
-            //
-            //for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
-            //{
-            //    Debug.Log(SceneUtility.GetScenePathByBuildIndex(i));
+        //public void Quit()
+        //{
+        //    for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+        //    {
+        //        Debug.Log(SceneUtility.GetScenePathByBuildIndex(i));
 
-            //    if (SceneUtility.GetScenePathByBuildIndex(i).Contains("ScenesDemonstration"))
-            //    {
-            //        SceneManager.LoadScene(i, LoadSceneMode.Single);
-            //        return;
-            //    }
-            //}
-            // Quit if not found
-            Application.Quit();
-        }
+        //        if (SceneUtility.GetScenePathByBuildIndex(i).Contains("ScenesDemonstration"))
+        //        {
+        //            SceneManager.LoadScene(i, LoadSceneMode.Single);
+        //            return;
+        //        }
+        //    }
+        //    // Quit if not found
+        //    Application.Quit();
+        //}
 
         private void OnCollisionEnter(Collision collision)
         {
@@ -107,9 +105,13 @@ namespace MFlight.Demo
                     thrust.Value += Convert.ToInt32(100f * Time.unscaledDeltaTime);
                 if (Input.GetKey(KeyCode.KeypadMinus))
                     thrust.Value -= Convert.ToInt32(100f * Time.unscaledDeltaTime);
-                thrust.Value = Mathf.Clamp(thrust.Value, -500, 500);
-                //Debug.Log($"thrust = {thrust}");
             }
+
+            //Debug.Log($"thrust = {Input.mouseScrollDelta}");
+            thrust.Value += Input.mouseScrollDelta.y > 0 ? 50 : Input.mouseScrollDelta.y < 0 ? -50 : 0;
+
+            thrust.Value = Mathf.Clamp(thrust.Value, -500, 500);
+
 
             if (Input.GetKey(KeyCode.LeftControl))
             {

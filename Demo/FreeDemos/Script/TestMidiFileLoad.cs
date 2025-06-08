@@ -43,7 +43,7 @@ namespace DemoMPTK
         private void Awake()
         {
             MidiPlayerGlobal.LoadCurrentSF();
-            MidiLoader = FindObjectOfType<MidiFilePlayer>();
+            MidiLoader = FindFirstObjectByType<MidiFilePlayer>();
 
             if (MidiLoader == null)
             {
@@ -90,7 +90,7 @@ namespace DemoMPTK
         private void TheMostSimpleDemoForMidiLoader()
         {
             // A MidiFileLoader prefab must be added to the hierarchy with the editor (see menu MPTK)
-            MidiFilePlayer mfp = FindObjectOfType<MidiFilePlayer>();
+            MidiFilePlayer mfp = FindFirstObjectByType<MidiFilePlayer>();
             if (mfp == null)
             {
                 Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the Maestro menu.");
@@ -124,8 +124,6 @@ namespace DemoMPTK
 
         void OnGUI()
         {
-            if (!HelperDemo.CheckSFExists()) return;
-
             HelperDemo.GUIScale();
 
             // Set custom Style. Good for background color 3E619800

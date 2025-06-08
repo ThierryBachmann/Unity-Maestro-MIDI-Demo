@@ -1,8 +1,4 @@
-﻿//#define DEBUG_HISTO_DSPSIZE
-// remove   STEAMAUDIO_ENABLED
-// add      UNITY_OBOE
-// add      DEBUG_HISTO_DSPSIZE
-
+﻿
 // Some interesintg link for Oboe
 // https://github.com/google/oboe/blob/main/docs/README.md
 // https://github.com/google/oboe/wiki/AppsUsingOboe
@@ -20,18 +16,34 @@ using UnityEngine.UI;
 
 namespace MPTKDemoEuclidean
 {
+    // Look also at TestTapMidi.cs script
+    // which process MIDI note-on from tap on the UI.
+
     public class TestOboeMaestro : MonoBehaviour
     {
+        public Slider SliderVolume;
+        public Slider SliderExtraVolume;
+        public Text TxtVolume;
+
         public Text TxtTittle;
         public Text TxtVersion;
         public Text TxtInfo;
+        public Text TxtLog;
+
         public Text TxtSpeed;
+        public Button BtResetSpeed;
+        public Slider SliderSpeed;
+
         public Text TxtPosition;
-        public Toggle TogApplyFilter;
-        public Toggle TogApplyReverb;
         public Button BtPrevious;
         public Button BtMidi;
         public Button BtNext;
+        public Toggle TogLogEvent;
+
+        public Button BtResetStat;
+        public Button BtLogAudioInfo;
+        public Button BtFreezeInfo;
+        public Button BtHelp;
 
         public int PresetInstrument;
         PopupListBox popupInstrument;
@@ -41,39 +53,84 @@ namespace MPTKDemoEuclidean
         public static PopupListBox PopupListInstrument;
 
         public Dropdown ComboMidiList;
+        public Slider SliderPositionMidi;
+
         public Dropdown ComboFrameRate;
         public Dropdown ComboBufferSize;
-        public Slider SliderPositionMidi;
+        public Toggle TogApplyFilter;
+        public Slider SliderFilter;
+        public Toggle TogApplyReverb;
+        public Slider SliderReverb;
+        public Toggle TogApplyChorus;
+        public Slider SliderChorus;
+        public Toggle TogApplyInterpol;
+        public RectTransform RectTransformLog;
+        public ScrollRect scrollRect;
 
         List<string> frameRate = new List<string> { "Default", "24000", "36000", "48000", "60000", "72000", "84000", "96000" };
         List<string> bufferSize = new List<string> { "64", "128", "256", "512", "1024", "2048" };
         List<string> midiList = new List<string>();
 
         public LinkedList<string> ListMessage = new LinkedList<string>();
+        StringBuilder infoLog;
+        bool logUpdated = false;
+        bool InfoFreeze = false;
 
         // MidiFilePlayer prefab is found by script
         private MidiFilePlayer midiFilePlayer;
 
-        //Called when there is an exception
+        public float lineHeight;
+
+        //Called when there is an exception. Warning: UI can be called only from the UI thread
         void LogCallback(string logString, string stackTrace, LogType type)
         {
-            // if (type != LogType.Log)
             if (!string.IsNullOrWhiteSpace(logString))
             {
-                ListMessage.AddLast(logString);
-                // Keep only the last 3 messages
-                if (ListMessage.Count > 3)
+                ListMessage.AddLast(ListMessage.Count.ToString() + " - " + DateTime.Now.ToString("HH:mm:ss") + " - " + logString);
+                if (ListMessage.Count > 100)
                     ListMessage.RemoveFirst();
+                logUpdated = true;
             }
         }
+        private float CalculateLineHeight(Text text)
+        {
+            // Base line height with font size and line spacing
+            float baseLineHeight = text.fontSize * text.lineSpacing;
 
+            // Adjust for scaling (if any)
+            float adjustedHeight = baseLineHeight * text.rectTransform.lossyScale.y;
+
+            return adjustedHeight;
+        }
         void Start()
         {
+            //MidiSynth.TestAndroidSamples(8);
+            //MidiSynth.TestAndroidSamples(56);
+            //MidiSynth.TestAndroidSamples(100);
+            //MidiSynth.TestAndroidSamples(128);
+            //MidiSynth.TestAndroidSamples(256);
+            //MidiSynth.TestAndroidSamples(500);
+            //return;
+
+            lineHeight = CalculateLineHeight(TxtLog);
             Application.SetStackTraceLogType(LogType.Error, StackTraceLogType.Full);
             Application.SetStackTraceLogType(LogType.Warning, StackTraceLogType.Full);
-            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.None);
+            Application.SetStackTraceLogType(LogType.Log, StackTraceLogType.ScriptOnly);
             Application.logMessageReceivedThreaded += LogCallback;
             Input.simulateMouseWithTouches = true;
+
+            SliderVolume.onValueChanged.AddListener((float value) => { SetVolume(); }); // from 0 to 1
+            SliderExtraVolume.onValueChanged.AddListener((float value) => { SetVolume(); }); // from 0 to 9
+            void SetVolume()
+            {
+                midiFilePlayer.MPTK_Volume = SliderVolume.value + SliderExtraVolume.value;
+            }
+
+            SliderSpeed.onValueChanged.AddListener((float value) => { midiFilePlayer.MPTK_Speed = value; });
+            BtResetSpeed.onClick.AddListener(() =>
+            {
+                SliderSpeed.value = 1f; 
+            });
 
             // Create MIDI list for the MIDI player 
             // ------------------------------------
@@ -118,7 +175,8 @@ namespace MPTKDemoEuclidean
                 {
                     midiFilePlayer.MPTK_Stop();
                     // Changing synth rate will reinit the synth
-                    midiFilePlayer.MPTK_IndexSynthRate = iCombo - 1; //  -1:defaul:48000, 0:24000, 1:36000, 2:48000, 3:60000, 4:72000, 5:84000, 6:96000
+                    Debug.Log($"ComboFrameRate change {iCombo}");
+                    midiFilePlayer.MPTK_IndexSynthRate = iCombo - 1; //  -1:default, 0:24000, 1:36000, 2:48000, 3:60000, 4:72000, 5:84000, 6:96000
                     //midiFilePlayer.MPTK_Channels[0].PresetNum = PresetInstrument;
                 }
                 catch (Exception ex)
@@ -148,15 +206,29 @@ namespace MPTKDemoEuclidean
 
             // Apply Effects
             TogApplyFilter.onValueChanged.AddListener((bool apply) => { if (midiFilePlayer.MPTK_EffectSoundFont != null) midiFilePlayer.MPTK_EffectSoundFont.EnableFilter = apply; });
+            SliderFilter.onValueChanged.AddListener((float pos) => { if (midiFilePlayer.MPTK_EffectSoundFont != null) midiFilePlayer.MPTK_EffectSoundFont.FilterFreqOffset = pos; });
+
             TogApplyReverb.onValueChanged.AddListener((bool apply) => { if (midiFilePlayer.MPTK_EffectSoundFont != null) midiFilePlayer.MPTK_EffectSoundFont.EnableReverb = apply; });
+            SliderReverb.onValueChanged.AddListener((float pos) => { if (midiFilePlayer.MPTK_EffectSoundFont != null) midiFilePlayer.MPTK_EffectSoundFont.ReverbAmplify = pos; });
+
+            TogApplyChorus.onValueChanged.AddListener((bool apply) => { if (midiFilePlayer.MPTK_EffectSoundFont != null) midiFilePlayer.MPTK_EffectSoundFont.EnableChorus = apply; });
+            SliderChorus.onValueChanged.AddListener((float pos) => { if (midiFilePlayer.MPTK_EffectSoundFont != null) midiFilePlayer.MPTK_EffectSoundFont.ChorusAmplify = pos; });
+
+            TogApplyInterpol.onValueChanged.AddListener((bool apply) =>
+            {
+                if (midiFilePlayer.InterpolationMethod == fluid_interp.None)
+                    midiFilePlayer.InterpolationMethod = fluid_interp.Linear;
+                else
+                    midiFilePlayer.InterpolationMethod = fluid_interp.None;
+            });
 
             // Find MidiStreamPlayer (play note in real time or whole MIDI file)
-            midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiFilePlayer == null)
                 Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add to the scene with the Maestro menu.");
             else
             {
-                // Did'nt works because the MPTK synth is already started
+                // Not works because the MPTK synth is already started
                 //midiFilePlayer.OnEventSynthStarted.AddListener((string synthName) =>
                 //{
                 //    Debug.Log($"OnEventSynthStarted {synthName}");
@@ -173,7 +245,6 @@ namespace MPTKDemoEuclidean
                 PresetInstrument = popupInstrument.FirstIndex();
                 popupInstrument.Select(PresetInstrument);
                 TxtSelectedInstrument.text = popupInstrument.LabelSelected(PresetInstrument);
-
 
                 TxtVersion.text = $"Version:{Application.version}    Unity:{Application.unityVersion}";
                 TxtTittle.text = Application.productName;
@@ -193,16 +264,20 @@ namespace MPTKDemoEuclidean
                         midiFilePlayer.MPTK_Stop();
                 });
 
-                BtNext.onClick.AddListener(() =>
-                {
-                    midiFilePlayer.MPTK_Next();
-                });
+                BtNext.onClick.AddListener(() => { midiFilePlayer.MPTK_Next(); });
+                BtResetStat.onClick.AddListener(() => { midiFilePlayer.MPTK_ResetStat(); ListMessage.Clear(); logUpdated = true; });
+                BtLogAudioInfo.onClick.AddListener(() => { midiFilePlayer.LogInfoAudio(); });
+                BtHelp.onClick.AddListener(() => { GotoWeb("https://paxstellar.fr/2024/11/23/deeper-dive-in-mptk/"); });
+                TogLogEvent.isOn = midiFilePlayer.MPTK_LogEvents;
+                TogLogEvent.onValueChanged.AddListener((bool value) => midiFilePlayer.MPTK_LogEvents = value);
             }
 
             Debug.Log("Defined synth settings");
-            ComboFrameRate.value = 3; // 48000
+            BtFreezeInfo.onClick.AddListener(() => { InfoFreeze = !InfoFreeze; });
+            ComboFrameRate.value = 0; // 48000
             ComboBufferSize.value = 3;
             midiFilePlayer.MPTK_InitSynth();
+
         }
 
         /// <summary>
@@ -230,7 +305,10 @@ namespace MPTKDemoEuclidean
             popupInstrument.gameObject.SetActive(true);
         }
 
+        private void FixedUpdate()
+        {
 
+        }
         private void Update()
         {
             // Search for each controller in case of multiple controller must be deleted (quite impossible!)
@@ -252,59 +330,51 @@ namespace MPTKDemoEuclidean
                 if (midiFilePlayer.MPTK_EffectSoundFont != null)
                 {
                     TogApplyFilter.SetIsOnWithoutNotify(midiFilePlayer.MPTK_EffectSoundFont.EnableFilter);
+                    SliderFilter.SetValueWithoutNotify(midiFilePlayer.MPTK_EffectSoundFont.FilterFreqOffset);
+
                     TogApplyReverb.SetIsOnWithoutNotify(midiFilePlayer.MPTK_EffectSoundFont.EnableReverb);
+                    SliderReverb.SetValueWithoutNotify(midiFilePlayer.MPTK_EffectSoundFont.ReverbAmplify);
+
+                    TogApplyChorus.SetIsOnWithoutNotify(midiFilePlayer.MPTK_EffectSoundFont.EnableChorus);
+                    SliderChorus.SetValueWithoutNotify(midiFilePlayer.MPTK_EffectSoundFont.ChorusAmplify);
                 }
 
+                TogApplyInterpol.SetIsOnWithoutNotify(midiFilePlayer.InterpolationMethod != fluid_interp.None);
+
+                BtFreezeInfo.GetComponentInChildren<Text>().text = InfoFreeze ? "Frozen" : "Freeze";
+
+                TxtVolume.text = $"Volume:{midiFilePlayer.MPTK_Volume:F2}";
                 TxtSpeed.text = $"Speed:{midiFilePlayer.MPTK_Speed:F1}";
                 TxtPosition.text = $"Tick:{midiFilePlayer.MPTK_TickCurrent}";
 
-                // Build synth information
-                // -----------------------
-
-
-                StringBuilder infoSynth = new StringBuilder();
-                infoSynth.Append($"AudioEngine: {midiFilePlayer.AudioEngine} BufferSizeInFrames: {midiFilePlayer.AudioBufferLenght} FramesPerCallback: {midiFilePlayer.AudioNumBuffers}");
-                infoSynth.AppendLine($" OutputRate: {midiFilePlayer.OutputRate} Hz DspBufferSize: {midiFilePlayer.DspBufferSize}");
-                infoSynth.Append($"Voice:{midiFilePlayer.MPTK_StatVoiceCountActive} Free: {midiFilePlayer.MPTK_StatVoiceCountFree} Played: {midiFilePlayer.MPTK_StatVoicePlayed}");
-                infoSynth.AppendLine($" IdSynth: {midiFilePlayer.IdSynth} StatDspLoad: {midiFilePlayer.StatDspLoadPCT:F1} Average: {midiFilePlayer.StatDspLoadAVG:F1} % AudioLatency: {midiFilePlayer.StatDeltaAudioFilterReadMS:F2} ms");
-#if DEBUG_HISTO_DSPSIZE
-                int count_inf_64 = 0;
-                int count_not_64 = 0;
-                int min_size = 99999;
-                int max_size = 0;
-                for (int i = 0; i < midiFilePlayer.histoDspSize.Length; i++)
+                if (!InfoFreeze)
                 {
-                    if (midiFilePlayer.histoDspSize[i] < 64 ) count_inf_64++;
-                    if (midiFilePlayer.histoDspSize[i] % 64 != 0) count_not_64++;
-                    if (midiFilePlayer.histoDspSize[i] < min_size) min_size = midiFilePlayer.histoDspSize[i];
-                    if (midiFilePlayer.histoDspSize[i] > max_size) max_size = midiFilePlayer.histoDspSize[i];
+                    // Build synth information
+                    // -----------------------
+                    StringBuilder infoSynth = midiFilePlayer.synthInfo.MPTK_BuildInfoSynth(midiFilePlayer);
+
+                    // Display synth information
+                    TxtInfo.text = infoSynth.ToString();
                 }
 
-                infoSynth.AppendLine($"Frame length historic: size between:{min_size,-4} and {max_size,-4} LowerThan64:{count_inf_64,-2} NotModulo64:{count_not_64,-2}");
-                for (int i = 0; i < midiFilePlayer.histoDspSize.Length; i++)
+                if (logUpdated && !InfoFreeze)
                 {
-                    infoSynth.Append($"{midiFilePlayer.histoDspSize[i]:000} ");
-                    if (i % 25 == 0 && i != 0) infoSynth.AppendLine("");
+                    try
+                    {
+                        logUpdated = false;
+                        // if (infoLog == null)
+                        infoLog = new StringBuilder(256);
+                        //Debug.LogWarning($"ListMessage:{ListMessage.Count}");
+                        foreach (string msg in ListMessage)
+                            if (msg != null)
+                                infoLog.AppendLine(msg);
+                        TxtLog.text = infoLog.ToString();
+                        Canvas.ForceUpdateCanvases(); // Ensure UI updates before scrolling
+                        scrollRect.verticalNormalizedPosition = 0f; // Scroll to the bottom
+                        RectTransformLog.sizeDelta = new Vector3(RectTransformLog.sizeDelta.x, lineHeight * ListMessage.Count);
+                    }
+                    catch (Exception) { /* possible exception when linked list modified during enumeration ... not an issue */ }
                 }
-#endif
-                infoSynth.AppendLine("");
-
-#if UNITY_ANDROID && UNITY_OBOE
-                ResultWithValue<double> latency = midiFilePlayer.oboeAudioStream.CalculateLatencyMillis();
-                infoSynth.AppendLine($"Oboe info: SampleRate:{midiFilePlayer.oboeAudioStream.SampleRate} Hz BufferCapacityInFrames: {midiFilePlayer.oboeAudioStream.BufferCapacityInFrames}  Oboe Latency: {latency.Value:F2} ms");
-                infoSynth.AppendLine($"BytesPerFrame:{midiFilePlayer.oboeAudioStream.BytesPerFrame} FramesPerBurst:{midiFilePlayer.oboeAudioStream.FramesPerBurst} BufferSizeInFrames: {midiFilePlayer.oboeAudioStream.BufferSizeInFrames}");
-                infoSynth.AppendLine($"FramesRead:{midiFilePlayer.oboeAudioStream.FramesRead} FramesWritten:{midiFilePlayer.oboeAudioStream.FramesWritten} PerformanceMode:{midiFilePlayer.oboeAudioStream.PerformanceMode}");
-                
-#endif
-                try
-                {
-                    foreach (string msg in ListMessage)
-                        infoSynth.AppendLine(msg);
-                }
-                catch (Exception) { /* possible exception when linked list modified during enumeration ... not an issue */ }
-
-                // Display synth information
-                TxtInfo.text = infoSynth.ToString();
             }
         }
 

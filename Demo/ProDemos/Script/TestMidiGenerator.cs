@@ -23,8 +23,6 @@ namespace DemoMPTK
 
         void OnGUI()
         {
-            if (!HelperDemo.CheckSFExists()) return;
-
             Vector3 scale = HelperDemo.GUIScale();
 
             // Set custom Style. Good for background color 3E619800
@@ -58,6 +56,9 @@ namespace DemoMPTK
             GUIExample(CreateMidiStream_time_signature_4_3, "TU - Time Signature 4 3 --> 4/8", "Generated - Tick - Time signature 4 3");
             GUIExample(LoadMidi_add_four_notes_at_beginning, "Load a MIDI from MIDI DB and add MIDI events", "Generated - Load And Modify MIDI");
             GUIExample(CreateMidi_with_text_information, "Add text information as lyrics", "Generated - Add Text");
+            GUIExample(CreateMidiStream_128_channel_fast, "Create MIDI with 128 channels and 128 instruments almost simultaneously, not recommended!", "Generated - Channel Extension Fast");
+            GUIExample(CreateMidiStream_128_channel_slow, "Create MIDI with 128 channels and 128 instruments at each quarter", "Generated - Channel Extension Slow");
+            GUIExample(CreateMidiStream_drum, "Drum 4 measure with 3 kick each", "Generated - Drum");
 
             GUILayout.EndVertical();
             GUILayout.EndScrollView();
@@ -90,10 +91,11 @@ namespace DemoMPTK
 
         private void GUIExample(Func<MPTKWriter> _mfwGenerator, string _title, string _filename)
         {
+            // Not useful Vector3 scale = HelperDemo.GUIScale();
             float height = 40;
             float width = 100;
             GUILayout.BeginHorizontal(myStyle.BacgDemosMedium);
-            GUILayout.Label(_title, myStyle.LabelLeft);
+            GUILayout.Label(_title, myStyle.LabelLeft, GUILayout.Width(width * 8));
             GUILayout.FlexibleSpace();
             mfwGenerator = _mfwGenerator;
             mfwFilename = _filename;
@@ -610,11 +612,13 @@ namespace DemoMPTK
             mfw.AddBPMChange(track: 0, absoluteTime, 240);
             mfw.AddChangePreset(track: 1, absoluteTime, channel: 0, preset: 0);
 
-            for (int velocity = 0; velocity <= 127; velocity += 5)
+            for (int velocity = 0; ; velocity += 3)
             {
-                // Duration = 1 second for a quarter at BPM 60
+                if (velocity > 127) velocity = 127;
                 mfw.AddNote(track: 1, absoluteTime, channel: 0, note: 60, velocity: velocity, length: ticksPerQuarterNote);
                 absoluteTime += ticksPerQuarterNote; // Next note will be played one quarter after the previous (time signature is 4/4)
+                if (velocity == 127)
+                    break;
             }
 
             return mfw;
@@ -797,12 +801,22 @@ namespace DemoMPTK
         private MPTKWriter CreateMidiStream_stable_sort()
         {
             MPTKWriter mfw = new MPTKWriter(deltaTicksPerQuarterNote: 500);
-            mfw.AddText(0, tick: 0, MPTKMeta.Lyric, "some text");
-            mfw.AddNote(1, tick: 500, 0, 61, 100, 500);
-            mfw.AddNote(1, tick: 0, 0, 60, 100, 500);
-            mfw.AddChangePreset(1, tick: 0, 0, preset: 100);
-            mfw.AddChangePreset(1, tick: 10, 0, preset: 100);
-            mfw.AddText(0, tick: 0, MPTKMeta.Lyric, "other text");
+            mfw.AddText(track: 0, tick: 0, MPTKMeta.Lyric, "Create unordered event - 1");
+            mfw.AddNote(track: 1, tick: 500, channel: 0, note: 61, 100, 500);
+            mfw.AddNote(track: 1, tick: 0, channel: 0, note: 60, 100, 500);
+            mfw.AddChangePreset(track: 1, tick: 0, channel: 0, preset: 100);
+            mfw.AddRawEvent(new MPTKEvent() { Track = 0, Tick = 1000, Command = MPTKCommand.MetaEvent, Meta = MPTKMeta.EndTrack });
+            mfw.AddText(track: 0, tick: 1000, MPTKMeta.Lyric, "Ordered event:P100 N60 N61");
+
+            mfw.AddText(track: 0, tick: 1500, MPTKMeta.Lyric, "Create unordered event with bank change - 2");
+            mfw.AddChangePreset(track: 1, tick: 1500, channel: 0, preset: 0);
+            mfw.AddControlChange(track: 1, tick: 1500, channel: 0, controller: MPTKController.BankSelectMsb, controllerValue: 120);
+            mfw.AddControlChange(track: 1, tick: 1500, channel: 0, controller: MPTKController.BankSelectLsb, controllerValue: 1);
+            mfw.AddNote(track: 1, tick: 2000, channel: 0, note: 64, 100, 500);
+            mfw.AddNote(track: 1, tick: 1500, channel: 0, note: 63, 100, 500);
+            mfw.AddRawEvent(new MPTKEvent() { Track = 1, Tick = 2000, Command = MPTKCommand.MetaEvent, Meta = MPTKMeta.EndTrack });
+            mfw.AddText(track: 0, tick: 2000, MPTKMeta.Lyric, "Ordered event:B120 P0 N63 N64");
+
             mfw.StableSortEvents(logPerf: true);
             return mfw;
         }
@@ -826,7 +840,7 @@ namespace DemoMPTK
                 mfw = new MPTKWriter();
 
                 // A MIDI loader is useful to load all MIDI events from a MIDI file.
-                MidiFilePlayer mfLoader = FindObjectOfType<MidiFilePlayer>();
+                MidiFilePlayer mfLoader = FindFirstObjectByType<MidiFilePlayer>();
                 if (mfLoader == null)
                 {
                     Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the Maestro menu.");
@@ -912,7 +926,7 @@ namespace DemoMPTK
                 ////// mfw.CalculateTiming();
 
                 // Find a MidiFilePlayer in the hierarchy
-                // MidiFilePlayer midiPlayer = FindObjectOfType<MidiFilePlayer>();
+                // MidiFilePlayer midiPlayer = FindFirstObjectByType<MidiFilePlayer>();
 
                 // And play!
                 // midiPlayer.MPTK_Play(mfw2: mfw);
@@ -1228,6 +1242,88 @@ namespace DemoMPTK
             return mfw;
         }
 
+        /// <summary>@brief
+        /// Midi Generated with MPTK for unitary test
+        /// </summary>
+        /// <returns></returns>
+        private MPTKWriter CreateMidiStream_128_channel_fast()
+        {
+            int ticksPerQuarterNote = 500;
+
+            MPTKWriter mfw = new MPTKWriter(ticksPerQuarterNote, channelcount: 128);
+
+            long absoluteTime = 0;
+
+            mfw.AddBPMChange(track: 0, absoluteTime, 120);
+
+            for (int channel = 20; channel <= 127; channel += 1)
+            {
+                // Duration = 1 second for a quarter at BPM 60
+                mfw.AddChangePreset(track: 1, absoluteTime, channel: channel, preset: channel);
+                mfw.AddNote(track: 1, absoluteTime, channel: channel, note: 60, velocity: 100, length: ticksPerQuarterNote * 2);
+                absoluteTime += ticksPerQuarterNote / 100; // Notes will be played at each 100th of quarter 
+            }
+            return mfw;
+        }
+
+        /// <summary>@brief
+        /// Midi Generated with MPTK for unitary test
+        /// </summary>
+        /// <returns></returns>
+        private MPTKWriter CreateMidiStream_128_channel_slow()
+        {
+            int ticksPerQuarterNote = 500;
+
+            MPTKWriter mfw = new MPTKWriter(ticksPerQuarterNote, channelcount: 128);
+
+            long absoluteTime = 0;
+
+            mfw.AddBPMChange(track: 0, absoluteTime, 120);
+
+            for (int channel = 20; channel <= 127; channel += 1)
+            {
+                // Duration = 1 second for a quarter at BPM 60
+                mfw.AddChangePreset(track: 1, absoluteTime, channel: channel, preset: channel);
+                mfw.AddNote(track: 1, absoluteTime, channel: channel, note: 60, velocity: 100, length: ticksPerQuarterNote);
+                absoluteTime += ticksPerQuarterNote; // Next note will be played one quarter after the previous (time signature is 4/4)
+            }
+            return mfw;
+        }
+
+        /// <summary>@brief
+        /// Midi Generated with MPTK for unitary test
+        /// </summary>
+        /// <returns></returns>
+        private MPTKWriter CreateMidiStream_drum()
+        {
+            int ticksPerQuarterNote = 500;
+
+            MPTKWriter mfw = new MPTKWriter(ticksPerQuarterNote, 1);
+
+            long absoluteTime = 0;
+
+            mfw.AddBPMChange(track: 0, absoluteTime, 60);
+
+            for (int measure = 0; measure <= 3; measure++)
+            {
+                for (int beat = 0; beat < 3; beat++)
+                {
+                    // Duration = 1 second for a quarter at BPM 60
+                    mfw.AddNote(track: 1, absoluteTime, channel: 9, note: 57, velocity: 100, length: ticksPerQuarterNote);
+                    absoluteTime += ticksPerQuarterNote; // Next note will be played one quarter after the previous (time signature is 4/4)
+                }
+
+                // Add a silence of one beat at the end of the bar.
+                // A noteon with a velocity of 1, so no sound, will be created.
+                // It is also possible to add a rest without a noteon, simply by increasing the beat counter absoluteTime.
+                // Adding a real noteon is only useful if you need to synchronise it with another event in your game.
+                mfw.AddSilence(track: 1, absoluteTime, channel: 9, length: ticksPerQuarterNote); // can be commented
+                absoluteTime += ticksPerQuarterNote; // mandatory to increase the time by one quarter to keep a 4/4 rhythm here
+            }
+
+            return mfw;
+        }
+
         public MPTKEvent AddOffMilli(MPTKWriter mfw, int track, float timeToPlay, int channel, int note)
         {
             long tick = mfw.ConvertMilliToTick(timeToPlay);
@@ -1245,7 +1341,7 @@ namespace DemoMPTK
         private void PlayDirectlyMidiSequence(string name, MPTKWriter mfw)
         {
             // Play MIDI with the MidiExternalPlay prefab without saving MIDI in a file
-            MidiFilePlayer midiPlayer = FindObjectOfType<MidiFilePlayer>();
+            MidiFilePlayer midiPlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiPlayer == null)
             {
                 Debug.LogWarning("Can't find a MidiFilePlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
@@ -1288,6 +1384,7 @@ namespace DemoMPTK
             // Calculate time, measure and quarter for each events
             mfw.CalculateTiming(logPerf: true);
 
+            //midiPlayer.MPTK_InitSynth(channelCount: 128);
             midiPlayer.MPTK_MidiAutoRestart = midiAutoRestart;
 
             midiPlayer.MPTK_Play(mfw2: mfw);
@@ -1314,39 +1411,40 @@ namespace DemoMPTK
             //! [ExampleCalculateMaps]
 
             // Write the MIDI file
-            mfw.WriteToFile(filename);
-
-            // Need an external player to play MIDI from a file from a folder
-            MidiExternalPlayer midiExternalPlayer = FindObjectOfType<MidiExternalPlayer>();
-            if (midiExternalPlayer == null)
+            if (mfw.WriteToFile(filename))
             {
-                Debug.LogWarning("Can't find a MidiExternalPlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
-                return;
+                // Need an external player to play MIDI from a file from a folder
+                MidiExternalPlayer midiExternalPlayer = FindFirstObjectByType<MidiExternalPlayer>();
+                if (midiExternalPlayer == null)
+                {
+                    Debug.LogWarning("Can't find a MidiExternalPlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
+                    return;
+                }
+                midiExternalPlayer.MPTK_Stop();
+
+                // this prefab is able to load a MIDI file from the device or from an url (http)
+                // -----------------------------------------------------------------------------
+                midiExternalPlayer.MPTK_MidiName = "file://" + filename;
+                midiExternalPlayer.MPTK_ExtendedText = true;
+                midiExternalPlayer.OnEventStartPlayMidi.RemoveAllListeners();
+                midiExternalPlayer.OnEventStartPlayMidi.AddListener((string midiname) =>
+                {
+                    Debug.Log($"Start playing {midiname}");
+                });
+
+                midiExternalPlayer.OnEventEndPlayMidi.RemoveAllListeners();
+                midiExternalPlayer.OnEventEndPlayMidi.AddListener((string midiname, EventEndMidiEnum reason) =>
+                {
+                    if (reason == EventEndMidiEnum.MidiErr)
+                        Debug.LogWarning($"Error  {midiExternalPlayer.MPTK_StatusLastMidiLoaded} when loading '{midiname}'");
+                    else
+                        Debug.Log($"End playing {midiname} {reason}");
+                });
+
+                midiExternalPlayer.MPTK_MidiAutoRestart = midiAutoRestart;
+
+                midiExternalPlayer.MPTK_Play();
             }
-            midiExternalPlayer.MPTK_Stop();
-
-            // this prefab is able to load a MIDI file from the device or from an url (http)
-            // -----------------------------------------------------------------------------
-            midiExternalPlayer.MPTK_MidiName = "file://" + filename;
-            midiExternalPlayer.MPTK_ExtendedText = true;
-            midiExternalPlayer.OnEventStartPlayMidi.RemoveAllListeners();
-            midiExternalPlayer.OnEventStartPlayMidi.AddListener((string midiname) =>
-            {
-                Debug.Log($"Start playing {midiname}");
-            });
-
-            midiExternalPlayer.OnEventEndPlayMidi.RemoveAllListeners();
-            midiExternalPlayer.OnEventEndPlayMidi.AddListener((string midiname, EventEndMidiEnum reason) =>
-            {
-                if (reason == EventEndMidiEnum.MidiErr)
-                    Debug.LogWarning($"Error  {midiExternalPlayer.MPTK_StatusLastMidiLoaded} when loading '{midiname}'");
-                else
-                    Debug.Log($"End playing {midiname} {reason}");
-            });
-
-            midiExternalPlayer.MPTK_MidiAutoRestart = midiAutoRestart;
-
-            midiExternalPlayer.MPTK_Play();
         }
         //! [ExampleMIDIWriteAndPlay]
 
@@ -1354,7 +1452,7 @@ namespace DemoMPTK
         private void WriteMidiToMidiDB(string name, MPTKWriter mfw)
         {
             // build the path + filename to the midi
-            string filename = Path.Combine(Application.persistentDataPath, name + ".mid");
+            string filename = Path.Combine(Application.persistentDataPath, "_" + name + ".mid");
             Debug.Log("Write MIDI file:" + filename);
 
             // Sort the events by ascending absolute time (optional)
@@ -1375,10 +1473,10 @@ namespace DemoMPTK
         //! [ExampleMIDIWriteAndPlay]
         private static void StopAllPlaying()
         {
-            MidiExternalPlayer midiExternalPlayer = FindObjectOfType<MidiExternalPlayer>();
+            MidiExternalPlayer midiExternalPlayer = FindFirstObjectByType<MidiExternalPlayer>();
             if (midiExternalPlayer != null)
                 midiExternalPlayer.MPTK_Stop();
-            MidiFilePlayer midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            MidiFilePlayer midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiFilePlayer != null)
                 midiFilePlayer.MPTK_Stop();
         }

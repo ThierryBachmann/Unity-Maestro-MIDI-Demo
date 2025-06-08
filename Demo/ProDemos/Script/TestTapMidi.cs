@@ -15,8 +15,7 @@ namespace MPTKDemoEuclidean
         /// If NoteToPlay is < 0, the pitch of the note is defined by the X position on the zone (between 48=C4 and 72=C6)
         /// </summary>
         public int NoteToPlay = -1;
-        public int LastPitch = 0;
-        public int LastVelocity = 0;
+        public float LastTime = 0;
 
         // For all tap components in the UI
         static public List<MPTKEvent> playerEvents = new List<MPTKEvent>();
@@ -25,7 +24,7 @@ namespace MPTKDemoEuclidean
         {
             Input.simulateMouseWithTouches = true;
             // Need MidiStreamPlayer to play note in real time
-            midiFilePlayer = FindObjectOfType<MidiFilePlayer>();
+            midiFilePlayer = FindFirstObjectByType<MidiFilePlayer>();
             if (midiFilePlayer == null)
                 Debug.LogWarning("Can't find a MidiStreamPlayer Prefab in the current Scene Hierarchy. Add it with the MPTK menu.");
         }
@@ -134,13 +133,22 @@ namespace MPTKDemoEuclidean
         {
             MPTKEvent mptkEvent;
 
+            // NoteToPlay is defined from the UI, see TapOneNoteCx (defined a not value for NoteToPlay)
+            // and TapAndDragPlayer (NoteToPlay = -1)
+            // ----------------------------------------------------------------------------------------
+
+            // When NoteToPlay < 0, the velocity is defined by the Y position on the control.
+            // Otherwise the velocity is set to 100 (velocity must be between 0 and 127).
             int velocity = NoteToPlay < 0 ? 30 + (int)(107f * ry) : 100;
+
+            // When NoteToPlay < 0, the pitch is defined by the X position on the control, see TapAndDragPlayer inspector.
+            // Otherwise the pitch is defined from the value set in the UI, see TapOneNoteC4 inspector.
             int pitch = NoteToPlay < 0 ? (int)Mathf.Lerp(48, 72, rx) : NoteToPlay;
 
-            //if (LastPitch != pitch && LastVelocity != velocity)
+            // Avoid to saturate the MIDI synth ...
+            if (Time.fixedTime - LastTime > 0.05f)
             {
-                LastPitch = pitch;
-                LastVelocity = velocity;
+                LastTime = Time.fixedTime;
                 mptkEvent = new MPTKEvent()
                 {
                     Channel = 0,
@@ -156,21 +164,15 @@ namespace MPTKDemoEuclidean
             }
         }
 
-        //private int BuildPitch(float v) { return (int)Mathf.Lerp(50, 72, v); }
-        //private int BuildVelocity(float v) { return 20 + (int)(107f * v); }
         public void StopAll()
         {
             if (playerEvents.Count > 0)
             {
-                Debug.Log($"MPTK_StopDirectEvent count:{playerEvents.Count}");
+                //Debug.Log($"MPTK_StopDirectEvent count:{playerEvents.Count}");
                 foreach (MPTKEvent ev in playerEvents)
                     midiFilePlayer.MPTK_StopDirectEvent(ev);
                 playerEvents.Clear();
-                LastPitch = LastVelocity = 0;
             }
-            // Clear all remaining sound
-            //Debug.Log($"MPTK_ClearAllSound");
-            //midiFilePlayer.MPTK_ClearAllSound();
         }
     }
 }

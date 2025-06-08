@@ -41,7 +41,7 @@ namespace DemoMVP
         private void Awake()
         {
             // Search for an existing prefab in the scene
-            midiStreamPlayer = FindObjectOfType<MidiStreamPlayer>();
+            midiStreamPlayer = FindFirstObjectByType<MidiStreamPlayer>();
             if (midiStreamPlayer == null)
             {
                 // All lines bellow are useless if the prefab is found on the Unity Scene.

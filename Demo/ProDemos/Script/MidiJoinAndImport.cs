@@ -49,6 +49,11 @@ namespace DemoMPTKImport
                 UpdatePosition();
             });
 
+            SliderPosition.onValueChanged.AddListener((float pos) =>
+            {
+                if (mfPlayer.MPTK_IsPlaying)
+                    mfPlayer.MPTK_Position = (int)pos;
+            });
 
             PopMidi = new PopupListItem()
             {
@@ -117,12 +122,21 @@ namespace DemoMPTKImport
                 // Insert the MPTK_MidiEvents of the MIDI loaded in the MPTK_MidiEvents of the MIDI Writer. 
                 mfWriter.ImportFromEventsList(mfLoader.MPTK_MidiEvents, mfLoader.MPTK_DeltaTicksPerQuarterNote, position: position, name: "MidiJoined", logPerf: true, logDebug: true); ;
 
-                // If a MIDI player is already playing then update duration.
-                // Playing of a MIDI Writer is done with: mfPlayer.MPTK_Play(mfWriter)
-                if (mfPlayer != null && mfPlayer.MPTK_IsPlaying)
-                    mfPlayer.MPTK_MidiLoaded.MPTK_ComputeDuration();
+                /*  
+                    If a MIDI player is playing the MIDI sequence we have to recalculate the duration.
+                    The MIDI file player (mfPlayer) share the MIDI event list with the MIDI Writer (mfWriter).
+                    Any changes made to the mfWriter.MPTK_MidiEvents will have a direct effect on the Player.
+                    But we need to update some properties of the Player to get a correct value of the new duration.
+                */
 
+                if (mfPlayer != null && mfPlayer.MPTK_IsPlaying)
+                {
+                    mfPlayer.MPTK_MidiLoaded.MPTK_EventLastNote = mfPlayer.MPTK_MidiLoaded.MPTK_FindLastNote();
+                    mfPlayer.MPTK_MidiLoaded.MPTK_ComputeDuration();
+                    Debug.Log($"Last note-on: {(mfPlayer.MPTK_MidiLoaded.MPTK_EventLastNote.ToString() ?? "not found")} Duration: {mfPlayer.MPTK_MidiLoaded.MPTK_DurationMS / 1000f} second");
+                }
                 Debug.Log($"{mfLoader.MPTK_MidiName} Loaded {mfLoader.MPTK_MidiEvents.Count} events added, total events: {mfWriter.MPTK_MidiEvents.Count}");
+
                 UpdatePosition();
             }
         }
@@ -134,12 +148,14 @@ namespace DemoMPTKImport
         {
             if (mfWriter != null && mfWriter.MPTK_MidiEvents != null)
             {
-                // The MIDI file player will play the MIDI events list found in the MIDI Writer.
-                // In fact the mfPlayer.MPTK_MidiEvents will directly use the mfWriter.MPTK_MidiEvents for playing the MIDI.
-                // All changes done on the mfWriter.MPTK_MidiEvents have direct impact on the player.
-                // When playing, it's possible to add, modify or insert MIDI events in mfWriter.MPTK_MidiEvents,
-                // changes will be automatically taken into account by the player if the change position if after the current tick player (mfPlayer.MPTK_TickPlayer) .
-                // Inserting before mfPlayer.MPTK_TickPlayer could perturbate the player. 
+                /*
+                    The MIDI file player will play the MIDI event list found in the MIDI Writer.
+                    In fact the mfPlayer.MPTK_MidiEvents will directly use the mfWriter.MPTK_MidiEvents to play the MIDI.
+                    Any changes made to the mfWriter.MPTK_MidiEvents will have a direct effect on the Player.
+                    During playback it's possible to add, modify or insert MIDI events in mfWriter.MPTK_MidiEvents,
+                    Changes are automatically taken into account by the player if the change position is after the current tick player (mfPlayer.MPTK_TickPlayer).
+                    Insertion before mfPlayer.MPTK_TickPlayer may cause the player to malfunction. 
+                */
                 mfPlayer.MPTK_Play(mfWriter);
             }
             else
@@ -272,7 +288,7 @@ namespace DemoMPTKImport
             }
             SliderPosition.minValue = 0f;
             SliderPosition.maxValue = mfPlayer.MPTK_DurationMS;
-            SliderPosition.value = (float)mfPlayer.MPTK_Position;
+            SliderPosition.SetValueWithoutNotify((float)mfPlayer.MPTK_Position);
         }
 
         void OnGUI()

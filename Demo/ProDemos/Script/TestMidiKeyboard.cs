@@ -3,6 +3,11 @@ using UnityEngine;
 using System;
 using UnityEngine.UI;
 using MidiPlayerTK;
+using System.Collections;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace DemoMPTK
 {
@@ -14,7 +19,7 @@ namespace DemoMPTK
         public InputInt InputPreset;
         public InputInt InputNote;
         public Toggle ToggleMidiRead;
-        public Toggle ToggleRealTimeRead;
+        //public Toggle ToggleRealTimeRead;
         public Toggle ToggleMsgSystem;
         public Text TextSendNote;
         public Text TextAlertRT;
@@ -28,116 +33,105 @@ namespace DemoMPTK
         // Maestro prefab for playing MIDI event coming from a connected MIDI keyboard
         // They are defined in the UI
         public MidiStreamPlayer midiStreamPlayer;
-        public MidiFilePlayer midiFilePlayer;
+
+        private bool midiKeyboardReady = false;
 
         private void Start()
         {
             // Midi Keyboard need to be initialized at start
-            MidiKeyboard.MPTK_Init();
-
-            // Log version of the Midi plugins
-            Debug.Log(MidiKeyboard.MPTK_Version());
-
-            TextAlertRT.enabled = false;
-
-            // UI Toggle for reading MIDI keyboard events. Open or close Midi Input Devices.
-            ToggleMidiRead.onValueChanged.AddListener((bool state) =>
+            if (!MidiKeyboard.MPTK_Init())
             {
-                if (state)
-                    MidiKeyboard.MPTK_OpenAllInp();
-                else
-                    MidiKeyboard.MPTK_CloseAllInp();
-                CheckStatus($"Open/close all input");
-
-            });
-
-            // UI Toggle for real time read (MIDI message processing )
-            ToggleRealTimeRead.onValueChanged.AddListener((bool state) =>
+#if xUNITY_EDITOR
+                EditorApplication.isPlaying = false;
+#else
+                // Let the application running for reading message
+                Debug.Log("Exit the demo.");
+                //Application.Quit();
+#endif
+            }
+            else
             {
-                if (state)
+                midiKeyboardReady = true;
+                // Log version of the Midi plugins
+                Debug.Log(MidiKeyboard.MPTK_Version());
+
+                TextAlertRT.enabled = false;
+
+                // UI Toggle for reading MIDI keyboard events. Open or close Midi Input Devices.
+                ToggleMidiRead.onValueChanged.AddListener((bool state) =>
                 {
-                    // MIDI message are processed when available without waiting a Unity Update()
-                    // There is some risq of crash when app in Unity editor is stopped (Unity is not able to unload external module loaded).
-                    TextAlertRT.enabled = true;
-                    MidiKeyboard.OnActionInputMidi += ProcessEvent;
-                    MidiKeyboard.MPTK_SetRealTimeRead();
-                }
-                else
+                    if (state)
+                        MidiKeyboard.MPTK_OpenAllInp();
+                    else
+                        MidiKeyboard.MPTK_CloseAllInp();
+                    CheckStatus($"Open/close all input");
+
+                });
+
+                //// UI Toggle for real time read (MIDI message processing )
+                //ToggleRealTimeRead.onValueChanged.AddListener((bool state) =>
+                //{
+                //    if (state)
+                //    {
+                //        // MIDI message are processed when available without waiting a Unity Update()
+                //        // There is some risq of crash when app in Unity editor is stopped (Unity is not able to unload external module loaded).
+                //        TextAlertRT.enabled = true;
+                //        MidiKeyboard.OnActionInputMidi += ProcessEvent;
+                //        MidiKeyboard.MPTK_SetRealTimeRead();
+                //    }
+                //    else
+                //    {
+                //        // MIDI message are processed from the Unity Update()
+                //        // So, there is latency related to the current Unity FPS.
+                //        TextAlertRT.enabled = false;
+                //        MidiKeyboard.OnActionInputMidi -= ProcessEvent;
+                //        MidiKeyboard.MPTK_UnsetRealTimeRead();
+                //    }
+                //});
+
+                // UI toggle for reading or not system message (not sysex)
+                ToggleMsgSystem.onValueChanged.AddListener((bool state) =>
                 {
-                    // MIDI message are processed from the Unity Update()
-                    // So, there is latency related to the current Unity FPS.
-                    TextAlertRT.enabled = false;
-                    MidiKeyboard.OnActionInputMidi -= ProcessEvent;
-                    MidiKeyboard.MPTK_UnsetRealTimeRead();
-                }
-            });
+                    MidiKeyboard.MPTK_ExcludeSystemMessage(state);
+                });
 
-            // UI toggle for reading or not system message (not sysex)
-            ToggleMsgSystem.onValueChanged.AddListener((bool state) =>
-            {
-                MidiKeyboard.MPTK_ExcludeSystemMessage(state);
-            });
-
-            // UI button for playing one note
-            InputNote.OnEventValue.AddListener((int val) =>
-            {
-                TextSendNote.text = "Send Note " + HelperNoteLabel.LabelFromMidi(val);
-            });
-
-            // UI button for Read preset value and send a midi message to change preset on the device 'index"
-            InputPreset.OnEventValue.AddListener((int val) =>
-            {
-                int index = InputIndexDevice.Value;
-
-                // Send a patch change when button is clicked
-                MPTKEvent midiEvent = new MPTKEvent()
+                // UI button for playing one note
+                InputNote.OnEventValue.AddListener((int val) =>
                 {
-                    Command = MPTKCommand.PatchChange,
-                    Value = InputPreset.Value,
-                    Channel = InputChannel.Value,
-                    Delay = 0,
-                };
-                MidiKeyboard.MPTK_PlayEvent(midiEvent, index);
-                CheckStatus($"Play PatchChange on device: {index}");
-            });
+                    TextSendNote.text = "Send Note " + HelperNoteLabel.LabelFromMidi(val);
+                });
 
-            TextMidiPlayed.text = "";
-
-            // Setting the MidiFilePlayer prefab. Need to be defined from the UI.
-
-            // Don't use the Maestro internal synth, but send MIDI events to the external MIDI Synth
-            midiFilePlayer.MPTK_DirectSendToPlayer = false;
-
-            // MPTK_LogEvents = true is not able to display MIDI events in the log
-            // because they are generated from a system thread and HandleLog is not able to receive these logs.
-            midiFilePlayer.MPTK_LogEvents = false;
-
-            // Select the first MIDI available
-            midiFilePlayer.MPTK_MidiIndex=0;
-
-            // Event triggered when MIDI start playing, display the MIDI name in the UI
-            midiFilePlayer.OnEventStartPlayMidi.AddListener(info => TextMidiPlayed.text = info);
-
-            // Event triggered when a group of MIDI event is available for playing
-            midiFilePlayer.OnEventNotesMidi.AddListener((List<MPTKEvent> events) =>
-            {
-                // Called for each MIDI event (or group of MIDI events) ready to be played by the MIDI synth.
-                // All these events are on same MIDI tick.
-                foreach (MPTKEvent midiEvent in events)
+                // UI button for Read preset value and send a midi message to change preset on the device 'index"
+                InputPreset.OnEventValue.AddListener((int val) =>
                 {
-                    // We log the event here for watching the MIDI event in the UI Log.
-                    Debug.Log(midiEvent);
-                    MidiKeyboard.MPTK_PlayEvent(midiEvent, InputIndexDevice.Value);
-                }
-            });
+                    int index = InputIndexDevice.Value;
+
+                    // Send a patch change when button is clicked
+                    MPTKEvent midiEvent = new MPTKEvent()
+                    {
+                        Command = MPTKCommand.PatchChange,
+                        Value = InputPreset.Value,
+                        Channel = InputChannel.Value,
+                        Delay = 0,
+                    };
+                    MidiKeyboard.MPTK_PlayEvent(midiEvent, index);
+                    CheckStatus($"Play PatchChange on device: {index}");
+                });
+
+                TextMidiPlayed.text = "";
+
+            }
         }
 
         private void OnApplicationQuit()
         {
-            Debug.Log("OnApplicationQuit " + Time.time + " seconds");
-            MidiKeyboard.MPTK_UnsetRealTimeRead();
-            MidiKeyboard.MPTK_CloseAllInp();
-            CheckStatus($"Close all input");
+            if (midiKeyboardReady)
+            {
+                //Debug.Log("OnApplicationQuit " + Time.time + " seconds");
+                MidiKeyboard.MPTK_UnsetRealTimeRead();
+                MidiKeyboard.MPTK_CloseAllInp();
+                CheckStatus($"Close all input");
+            }
         }
 
         /// <summary>@brief
@@ -270,12 +264,15 @@ namespace DemoMPTK
 
         private void Update()
         {
+            if (!midiKeyboardReady)
+                return;
+
             try
             {
-                // Count of avialable MIDI events from the external MIDI keyboard
+                // Count of available MIDI events from the external MIDI keyboard
                 TextCountEventQueue.text = $"Read queue: {MidiKeyboard.MPTK_SizeReadQueue()}";
 
-                if (ToggleMidiRead.isOn && !ToggleRealTimeRead.isOn)
+                if (ToggleMidiRead.isOn/* && !ToggleRealTimeRead.isOn*/)
                 {
                     // Check every TimeForRefresh millisecond if a new device is connected or is disconnected
                     if (Time.fixedUnscaledTime > TimeForRefresh)

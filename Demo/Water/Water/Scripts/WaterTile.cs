@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UnityStandardAssets.Water
+namespace LiteWater
 {
     [ExecuteAlways]
     public class WaterTile : MonoBehaviour

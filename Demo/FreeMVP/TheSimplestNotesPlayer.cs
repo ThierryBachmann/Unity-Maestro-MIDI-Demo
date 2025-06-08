@@ -1,86 +1,91 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using MidiPlayerTK;
-using MPTK.NAudio.Midi;
 
 namespace DemoMVP
 {
-    /// <summary>@brief
-    /// Minimum Viable Product focus on the essentials of a Maestro function. 
-    /// Only a few functions are presented. Links to the documentation are provided for further exploration.
-    /// Therefore, error tests are absent, the user interface is almost non-existent and manipulations in Unity are reduced. 
+    /// <summary>
+    /// Functionality Demonstrated:
+    /// - Plays a single C5 note when the space key is pressed.
+    /// - Stops the note when the space key is released.
     /// 
-    /// The goal is rather to learn how to use the Maestro API and then progress by building more complex applications.
-    /// Maestro is based on the use of prefabs (MidiFilePlayer, MidiStreamPlayer, …) which must be added in the Unity editor in the hierarchy of your project.
-    /// In these demos, we prefer to create the prefabs by script to avoid manipulations in the editor. 
-    /// It is rather recommended to create Prefabs in Unity Editor to take advantage of the Inspectors and its many directly accessible parameters.
+    /// How to Use:
+    /// 1. Add an empty GameObject to your Unity Scene and attach this script to the GameObject.
+    /// 2. Add a MidiStreamPlayer prefab to your scene (right click on the Hierarchy Tab, menu Maestro)
+    /// 3. Run the scene and press the space key to play the C5 note.
     /// 
-    /// Demonstration:      Play a single C5 note when the space key is pressed, stop the note when the key is released.
-    /// Implementation:     Add an empty gameobject in your Unity Scene then add this script to this gameobject.
-    /// Running and using:  Play and stroke the space key, a C5 note will be played.
+    /// Documentation References:
+    /// - MIDI Stream Player: https://paxstellar.fr/midi-file-player-detailed-view-2-2/
+    /// - MPTKEvent: https://mptkapi.paxstellar.com/d9/d50/class_midi_player_t_k_1_1_m_p_t_k_event.html
+    /// 
+    /// A Minimum Viable Product (MVP) that focuses on the essentials of the Maestro API functionality. 
+    /// This script demonstrates only a few basic functions to help users get started with the API.
+    /// 
+    /// Features and Approach:
+    /// - Error handling is minimal, the user interface is basic, and manipulations in Unity are minimized.
+    /// - Prefabs like `MidiFilePlayer` and `MidiStreamPlayer` are essential components of Maestro. 
+    ///   While this demo creates these prefabs via script, it is recommended to add them in the Unity editor 
+    ///   for real projects to take full advantage of the Inspector's parameters.
     /// 
     /// </summary>
     public class TheSimplestNotesPlayer : MonoBehaviour
     {
-        // This class is able to play MIDI event: play note, play chord, patch change, apply effect, ... see doc!
-        // https://mptkapi.paxstellar.com/d9/d1e/class_midi_player_t_k_1_1_midi_stream_player.html
-        private MidiStreamPlayer midiStreamPlayer;   
+        // MidiStreamPlayer is a class that can play MIDI events such as notes, chords, patch changes, and effects.
+        private MidiStreamPlayer midiStreamPlayer;
 
-        // Description of the MIDI event which will hold the description of the note to played and 
-        // https://mptkapi.paxstellar.com/d9/d50/class_midi_player_t_k_1_1_m_p_t_k_event.html
+        // MPTKEvent is a class that describes MIDI events such as notes to play.
         private MPTKEvent mptkEvent;
 
         private void Awake()
         {
-            // Search for an existing prefab in the scene
-            midiStreamPlayer = FindObjectOfType<MidiStreamPlayer>();
+            // Look for an existing MidiStreamPlayer prefab in the scene
+            midiStreamPlayer = FindFirstObjectByType<MidiStreamPlayer>();
+
             if (midiStreamPlayer == null)
             {
-                // All lines bellow are useless if the prefab is found on the Unity Scene.
-                Debug.Log("Any MidiStreamPlayer Prefab found in the current Scene Hierarchy.");
-                Debug.Log("It will be created by script. For a more serious project, add it to the scene!");
+                // If no MidiStreamPlayer prefab is found, create it dynamically
+                Debug.Log("No MidiStreamPlayer Prefab found in the current Scene Hierarchy.");
+                Debug.Log("A new MidiStreamPlayer prefab will be created via script. For production, add it manually to the scene!");
 
-                // Create an empty gameobject in the scene
+                // Create an empty GameObject to hold the Maestro-related prefab
                 GameObject go = new GameObject("HoldsMaestroPrefab");
 
-                // MidiPlayerGlobal load the SoundFont. It is a singleton, only one instance will be created. 
+                // Add the MidiPlayerGlobal component to manage the SoundFont. This is a singleton, so only one instance will be created.
                 go.AddComponent<MidiPlayerGlobal>();
 
-                // Add a MidiStreamPlayer prefab.
+                // Add the MidiStreamPlayer prefab to the GameObject
                 midiStreamPlayer = go.AddComponent<MidiStreamPlayer>();
 
-                // *** Set essential parameters ***
+                // *** Configure essential parameters for the player ***
 
-                // Core player is using internal thread for a good musical rendering
+                // Enable the internal core player for smooth playback
                 midiStreamPlayer.MPTK_CorePlayer = true;
 
-                // Display log about the MIDI events played.
-                // Enable Monospace font in the Unity log window for better display.
+                // Enable logging of MIDI events in the Unity Console
+                // Use a monospace font in the Console for better readability
                 midiStreamPlayer.MPTK_LogEvents = true;
 
-                // If disabled, nothing is send to the MIDI synth!
+                // Ensure that MIDI events are sent directly to the player for playback
                 midiStreamPlayer.MPTK_DirectSendToPlayer = true;
             }
-            Debug.Log("Use <Space> key to play a note.");
+
+            Debug.Log("Press the <Space> key to play a note.");
         }
 
-
-        void Update()
+        private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Space))
             {
-                // Assign our "Hello, World!" (using MPTKEvent's defaults value, so duration = -1 for an infinite note playing
-                // Value = 60 for playing a C5 (HelperNoteLabel class could be your friend)
+                // Create an MPTKEvent to describe the note to be played
+                // Value = 60 corresponds to the C5 note. Duration is set to -1 for infinite playback.
                 mptkEvent = new MPTKEvent() { Value = 60 };
 
-                // Start playing our "Hello, World!" note C5
+                // Start playing the C5 note
                 midiStreamPlayer.MPTK_PlayEvent(mptkEvent);
             }
 
             if (Input.GetKeyUp(KeyCode.Space))
             {
-                // Stop playing our "Hello, World!" note C5
+                // Stop playing the C5 note
                 midiStreamPlayer.MPTK_StopEvent(mptkEvent);
             }
         }

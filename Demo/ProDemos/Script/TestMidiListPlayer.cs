@@ -18,14 +18,12 @@ namespace DemoMPTK
 
         private void Start()
         {
-            if (!HelperDemo.CheckSFExists()) return;
-
-            // Checcj if the MidiListPlayer is defined in the inspector
+            // Check if the MidiListPlayer is defined in the inspector
             if (midiListPlayer == null)
             {
                 // No, by the way, try to find it 
                 Debug.Log("No MidiListPlayer defined with the editor inspector, try to find one");
-                MidiListPlayer fp = FindObjectOfType<MidiListPlayer>();
+                MidiListPlayer fp = FindFirstObjectByType<MidiListPlayer>();
                 if (fp == null)
                     Debug.LogWarning("Can't find a MidiListPlayer Prefab in the Hierarchy. Add it with the MPTK menu.");
                 else

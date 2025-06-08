@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+
 namespace MPTKDemoEuclidean
 {
     public class TextSlider : MonoBehaviour, IPointerDownHandler, IPointerClickHandler,
@@ -145,10 +146,10 @@ namespace MPTKDemoEuclidean
             }
         }
     }
+    [System.Serializable]
+    public class EventTextSlider : UnityEvent<int>
+    {
+    }
 }
 
 
-[System.Serializable]
-public class EventTextSlider : UnityEvent<int>
-{
-}

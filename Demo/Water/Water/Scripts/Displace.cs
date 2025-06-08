@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UnityStandardAssets.Water
+namespace LiteWater
 {
     [ExecuteAlways]
     [RequireComponent(typeof(WaterBase))]

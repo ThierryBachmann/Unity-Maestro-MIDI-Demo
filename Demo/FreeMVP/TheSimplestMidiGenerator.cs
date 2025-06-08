@@ -29,7 +29,7 @@ namespace DemoMVP
         void Start()
         {
             Debug.Log("Start: dynamically load MidiStreamPlayer prefab from the hierarchy.");
-            midiStreamPlayer = FindObjectOfType<MidiStreamPlayer>();
+            midiStreamPlayer = FindFirstObjectByType<MidiStreamPlayer>();
             if (midiStreamPlayer == null)
                 Debug.LogWarning("Can't find a MidiStreamPlayer Prefab in the current scene hierarchy. You can add it with the Maestro menu in Unity editor.");
             else
